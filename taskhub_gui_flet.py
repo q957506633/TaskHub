@@ -1758,12 +1758,12 @@ class TaskHubFlet:
 
         filter_bar = ft.Row([
             f_status, f_proj, f_type, f_pri, f_quick,
+            ft.Container(expand=True), export_btn,
         ], spacing=16, scroll=ft.ScrollMode.AUTO,
            vertical_alignment=ft.CrossAxisAlignment.CENTER)
         sort_bar = ft.Row([
             sort_dd, kw, overdue_chk, clear_btn,
             ft.Container(expand=True), dir_btn, add_proj_btn, add_type_btn,
-            export_btn,
         ], spacing=16, vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
         table_card = ft.Container(
