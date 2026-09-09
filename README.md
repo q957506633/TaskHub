@@ -1,193 +1,212 @@
-# TaskHub —— 工作任务跟踪台（桌面应用 + CLI 双模式）
+# TaskHub — Desktop Task Tracker (GUI + CLI)
 
-TaskHub 是一个本地优先的任务跟踪工具：**SQLite 单文件数据库 + Flet 原生桌面界面 + 完整 CLI**，同一数据库三种入口共用，改一处处处可见。零云端依赖、零第三方运行时依赖（CLI 部分），开箱即用。
+> **[English](README.md)** | [中文](README_ZH.md)
 
-## 功能特性
+TaskHub is a local-first task tracking tool: **single-file SQLite database + Flet native desktop UI + full CLI**. Three entry points share one database — change it anywhere, see it everywhere. Zero cloud dependency, zero third-party dependencies for the CLI, ready to use out of the box.
 
-### 桌面应用（TaskHub.exe，双击即用）
+## Features
 
-- **原生桌面窗口**：Flet/Flutter 引擎渲染，非浏览器页面，客户端随包内置、完全离线可用；`--web` 可回退浏览器模式
-- **四个视图**：
-  - **仪表盘**：KPI 可下钻、状态环图、近期关注、分布条图
-  - **任务看板**：四状态列（待办/进行中/已搁置/已完成）+ 右键流转；已完成列仅展示最近 5 条，列底可跳台账查看全部
-  - **任务台账**：多维筛选、表头排序、分页、导出 CSV
-  - **日程月历**：截止·开始·完成日期聚合展示
-- **任务详情弹窗**：状态流转 / 进度备注追加 / 字段编辑 / 完成关闭 / 删除，内容超长自动滚动
-- **任务类型与所属项目可自定义**：界面上直接新增/管理，存数据库、随库迁移；删除有在用保护
-- **界面中英文一键切换**（仅翻译界面文字，数据值保持原样）；亮色/暗色双主题；快捷键 `F5` 刷新、`Esc` 关闭弹窗
+### Desktop App (TaskHub.exe, double-click to run)
 
-### CLI（与 GUI 共用同一数据库）
+- **Native desktop window**: rendered by the Flet/Flutter engine, not a browser page; the client is bundled in the package and fully offline. Use `--web` to fall back to browser mode
+- **Four views**:
+  - **Dashboard**: drill-down KPIs, status donut chart, recent attention, distribution bars
+  - **Task Board**: four status columns (To-do / In Progress / On Hold / Done) with right-click transitions; the Done column shows the latest 5 only, with a shortcut to the ledger for all
+  - **Task Ledger**: multi-dimension filters, column sorting, pagination, CSV export
+  - **Calendar**: aggregated due / start / finish dates
+- **Task detail dialog**: status transitions / progress notes / field editing / close / delete, auto-scroll for long content
+- **User-managed task types & projects**: add/manage directly in the UI; stored in the database and migrated with it; in-use delete protection
+- **One-click UI language switch (Chinese/English)** (translates UI text only, data values unchanged); light/dark themes; shortcuts `F5` refresh, `Esc` close dialog
+- **Desktop app launcher sidebar** (left rail): pin frequently used apps, right-click to add/edit/reorder/launch — shared between the GUI sidebar and the CLI `apps` command
 
-- 所有命令支持 `--json` 输出机器可读契约
-- Python 3.10+ 标准库即可运行（sqlite3 / argparse / json），**零第三方依赖**
-- 打包版 `TaskHub.exe` 带参数运行即为同一套 CLI
+### CLI (shares the same database with the GUI)
 
-## 优势
+- Every command supports `--json` machine-readable output
+- Runs on Python 3.10+ standard library only (sqlite3 / argparse / json) — **zero third-party dependencies**
+- The packaged `TaskHub.exe` run with arguments is the same CLI
 
-1. **AI Agent / 自动化可直接操作**：CLI 输出为单行 JSON（`--json`），字段稳定、退出码语义明确（0 成功 / 2 参数校验错 / 3 运行时错），无需解析人读表格即可编程调用；任务新增自带**同名查重**（归一化比较），close 幂等，适合无人值守的自动化流程反复调用。
-2. **本地优先，数据自主**：数据落地单个 SQLite 文件（`data/taskhub.db`），无账号、无云端、无网络依赖；`TASKHUB_DB` 环境变量可随时切换/隔离数据库。
-3. **双模式同一数据**：人工在 GUI 里看板拖拽，Agent 在 CLI 里批量增改关，互不冲突、实时互通。
-4. **分类字段用户自托管**：任务类型、所属项目存数据库字典表，GUI/CLI 均可增删，删除有在用保护（仍被任务引用的类型/项目不允许删除）。
-5. **可验证、可打包**：自带 unittest 测试套件（临时库运行，不污染正式数据）；PyInstaller 一键打包为 Windows 独立目录。
+## Advantages
 
-## 快速开始
+1. **Directly operable by AI agents / automation**: CLI output is single-line JSON (`--json`) with stable fields and explicit exit codes (0 success / 2 validation error / 3 runtime error) — no need to parse human-readable tables; `add` has built-in **duplicate checking** (normalized comparison) and `close` is idempotent, ideal for unattended automation calling repeatedly.
+2. **Local-first, data ownership**: all data lives in a single SQLite file (`data/taskhub.db`) — no account, no cloud, no network; the `TASKHUB_DB` environment variable switches/isolates databases at any time.
+3. **Two modes, one dataset**: humans drag cards on the board while agents batch add/update/close via the CLI — no conflicts, real-time sync.
+4. **User-hosted categories**: task types and projects live in database dictionary tables, add/remove via GUI or CLI, with in-use delete protection (types/projects still referenced by tasks cannot be deleted).
+5. **Verifiable and packageable**: ships with a unittest suite (runs against a temp database); one-command PyInstaller packaging into a standalone Windows directory.
 
-### 方式一：下载打包版（Windows）
+## Quick Start
 
-从 [Releases](../../releases) 下载 `TaskHub_vX.Y.Z_win64.zip`，解压后：
+### Option 1: Download the packaged build (Windows)
 
-- 双击 `TaskHub.exe` → 图形界面（数据库自动初始化，首次运行为空库）
-- 命令行 `TaskHub.exe <子命令>` → CLI
+Download `TaskHub_vX.Y.Z_win64.zip` from [Releases](../../releases), extract, then:
 
-### 方式二：源码运行
+- Double-click `TaskHub.exe` → GUI (database auto-initialized; first run starts empty)
+- Run `TaskHub.exe <subcommand>` in a terminal → CLI
+
+### Option 2: Run from source
 
 ```bash
-pip install flet flet-charts flet-web   # 仅 GUI 需要；CLI 无依赖
+pip install flet flet-charts flet-web   # GUI only; CLI has no dependencies
 
-python run.py                            # 桌面窗口
-python run.py --web                      # 浏览器模式
-python taskhub.py init                   # CLI（自动建库）
-python -m unittest discover -s tests -v  # 运行测试
+python run.py                            # desktop window
+python run.py --web                      # browser mode
+python taskhub.py init                   # CLI (auto-creates the database)
+python -m unittest discover -s tests -v  # run tests
 ```
 
-### 打包桌面版
+### Build the desktop app
 
 ```bash
 pip install pyinstaller
-python build_exe.py          # 或 build_exe.bat
-# 产物：dist/TaskHub/（TaskHub.exe + _internal + data + 使用说明.txt）
+python build_exe.py
+# Output: dist/TaskHub/ (TaskHub.exe + _internal + data/)
 ```
 
-## 数据库位置
+## Database Location
 
-- 默认：`<TaskHub>/data/taskhub.db`（首次 `init` 或 GUI 启动时自动创建；任务类型与所属项目为空，由用户自建）
-- 环境变量覆盖（测试/多实例隔离）：
+- Default: `<TaskHub>/data/taskhub.db` (auto-created on first `init` or GUI launch; task types and projects start empty for users to create their own)
+- Override via environment variable (testing / multi-instance isolation):
 
 ```
-set TASKHUB_DB=D:\somewhere\other.db       （CMD）
-$env:TASKHUB_DB = "D:\somewhere\other.db"  （PowerShell）
-export TASKHUB_DB=/somewhere/other.db      （bash）
+set TASKHUB_DB=D:\somewhere\other.db       (CMD)
+$env:TASKHUB_DB = "D:\somewhere\other.db"  (PowerShell)
+export TASKHUB_DB=/somewhere/other.db      (bash)
 ```
 
-## CLI 命令速查
+## CLI Command Reference
 
-> 所有命令均支持 `--json`；日期格式统一 `YYYY-MM-DD`。
-> 打包版将 `python taskhub.py` 替换为 `TaskHub.exe` 即可。
+> All commands support `--json`; dates use `YYYY-MM-DD`.
+> For the packaged build, replace `python taskhub.py` with `TaskHub.exe`.
 
-### init —— 初始化数据库（幂等）
+### init — Initialize database (idempotent)
 
 ```
 python taskhub.py init [--json]
 ```
 
-自动创建 `data/` 目录、数据表与索引，重复执行无副作用。
+Creates `data/`, tables and indexes; safe to run repeatedly.
 
-### add —— 新增任务
+### add — Create a task
 
 ```
 python taskhub.py add --title X [--project 其他] [--type 日常事务] [--priority 中]
                      [--start 今天] [--deadline] [--detail] [--source] [--json]
 ```
 
-- `--title` 必填（业务主键）；新任务状态固定「待办」
-- 默认值：项目=其他、类型=日常事务、优先级=中（非法优先级回落中）、开始日期=今天
-- `--source` 写入详情首行 `[来源:xxx]`，`--detail` 随后
-- **同名查重**：同名（NFKC 归一化）且状态为待办/进行中/已搁置 → 跳过（`action=skipped_duplicate`，退出码 0）；同名已完结 → 正常新增
-- `--project` / `--type` 支持自由文本，首次出现自动注册为字典项
-- record_id 自动生成 22 位随机串
+- `--title` required (business key); new tasks start as "To-do"
+- Defaults: project=其他, type=日常事务, priority=中 (invalid priority falls back to 中), start date=today
+- `--source` writes `[来源:xxx]` as the first detail line, `--detail` follows
+- **Duplicate check**: same title (NFKC-normalized) with status To-do/In Progress/On Hold → skipped (`action=skipped_duplicate`, exit code 0); same title already Done → created normally
+- `--project` / `--type` accept free text; first occurrence auto-registers a dictionary entry
+- record_id is a generated 22-character random string
 
-### list —— 查询任务列表
+### list — Query tasks
 
 ```
 python taskhub.py list [--status 未完结] [--project X] [--keyword X] [--limit 100] [--json]
 ```
 
-- `--status`：待办 / 进行中 / 已搁置 / 已完成 / **未完结（默认）** / 全部
-- `--project`：按所属项目精确匹配（合法值见 `projects`）
-- `--keyword`：任务名称模糊匹配，**归一化比较**（全角→半角、去空白、转小写）
-- 排序：截止日期升序，空截止排最后；`--json` 时详情截前 200 字
+- `--status`: 待办 / 进行中 / 已搁置 / 已完成 / **未完结 (open, default)** / 全部
+- `--project`: exact match on project (valid values via `projects`)
+- `--keyword`: fuzzy title match with **normalization** (fullwidth→halfwidth, whitespace stripped, lowercased)
+- Sort: deadline ascending, empty deadline last; `--json` truncates details to 200 chars
 
-### show —— 查看单条任务详情
+### show — Task details
 
 ```
 python taskhub.py show <record_id或任务名> [--title X] [--json]
 ```
 
-- record_id 优先匹配，未命中按任务名称（归一化）；`--title` 显式按名称
-- 多条同名：未完结优先，再按开始日期降序；输出完整详情（不截断）
+- Matches record_id first, then title (normalized); `--title` forces title matching
+- Multiple same titles: open tasks first, then start date descending; full details (not truncated)
 
-### update —— 增量更新任务
+### update — Incremental update
 
 ```
 python taskhub.py update <record_id或任务名> [--title X] [--status] [--priority]
                          [--deadline] [--project] [--result] [--note] [--json]
 ```
 
-- 定位规则同 show
-- `--status`（待办/进行中/已搁置/已完成）、`--priority`（高/中/低）、`--deadline` 校验非法即报错；`--project`/`--type` 自由文本自动注册
-- **`--note` 追加进度备注**：格式 `[YYYY-MM-DD HH:MM] 备注`，追加到详情末尾，不覆盖历史
-- `--result` 非空时改写结果结论；无可更新字段 → 报错（退出码 2）
+- Same lookup rules as show
+- `--status` (待办/进行中/已搁置/已完成), `--priority` (高/中/低), `--deadline` validated with errors on invalid values; `--project`/`--type` accept free text with auto-registration
+- **`--note` appends a progress note**: format `[YYYY-MM-DD HH:MM] note`, appended to the end of details, history preserved
+- `--result` overwrites the result when non-empty; no updatable field → error (exit code 2)
 
-### close —— 关闭任务
+### close — Close a task
 
 ```
 python taskhub.py close <record_id或任务名> --result X [--finish-date 今天] [--json]
 ```
 
-- `--result` 必填；状态→已完成、写入完成日期（默认今天）与结果结论
-- **幂等**：已完成任务再 close → `action=skipped_already_done`（退出码 0，不覆盖已有结论）
+- `--result` required; status → Done, writes finish date (default today) and result
+- **Idempotent**: closing an already-done task → `action=skipped_already_done` (exit code 0, existing result not overwritten)
 
-### stats —— 统计
+### stats — Statistics
 
 ```
 python taskhub.py stats [--json]
 ```
 
-按状态 / 所属项目 / 优先级分组计数（组内按数量降序）。
+Grouped counts by status / project / priority (descending within groups).
 
-### projects —— 所属项目管理（数据库托管）
+### projects — Project dictionary (database-backed)
 
 ```
-python taskhub.py projects                      # 列出全部所属项目
-python taskhub.py projects --add "新项目"       # 新增所属项目
-python taskhub.py projects --delete "新项目"    # 删除所属项目
+python taskhub.py projects                      # list all projects
+python taskhub.py projects --add "NewProject"   # add a project
+python taskhub.py projects --delete "NewProject" # delete a project
 python taskhub.py projects [--json]
 ```
 
-- 所属项目由用户自建（无内置种子值）；`add`/`update` 时自由文本首次出现自动注册
-- **删除保护**：仍被任务使用的项目不允许删除（提示在用条数）
+- Projects are user-created (no built-in seeds); free text in `add`/`update` auto-registers
+- **Delete protection**: projects still referenced by tasks cannot be deleted (reports usage count)
 
-### types —— 任务类型管理（数据库托管）
+### types — Task type dictionary (database-backed)
 
 ```
-python taskhub.py types                      # 列出全部任务类型
-python taskhub.py types --add "新类型"       # 新增任务类型
-python taskhub.py types --delete "新类型"    # 删除任务类型
+python taskhub.py types                      # list all types
+python taskhub.py types --add "NewType"      # add a type
+python taskhub.py types --delete "NewType"   # delete a type
 python taskhub.py types [--json]
 ```
 
-- 任务类型由用户自建（无内置种子值）；自由文本自动注册；删除保护同上
+- Task types are user-created (no built-in seeds); free-text auto-registration; same delete protection
 
-### import —— 批量导入 JSON（幂等）
+### apps — Desktop app launcher management (shared by the GUI sidebar and CLI)
+
+```
+python taskhub.py apps                                              # list all apps
+python taskhub.py apps --add --name X --path "C:/path/app.exe"      # add (--path required)
+python taskhub.py apps --add --name X --path "..." --args "..." --icon image_path
+python taskhub.py apps --update <id> --name X --path X [--args X] [--icon X]
+python taskhub.py apps --update <id> --move up|down                 # reorder
+python taskhub.py apps --delete <id>
+python taskhub.py apps --launch <id>                                # launch the app
+```
+
+- `--path` accepts exe / lnk / url / directory; with `--args` the app is launched with an argument list, otherwise via `os.startfile`
+- `--add` / `--delete` / `--launch` are action switches (no value); `--update` / `--delete` / `--launch` take an id
+- The GUI sidebar and CLI share the `app_launchers` table; existing databases are migrated automatically on first open
+
+### import — Bulk JSON import (idempotent)
 
 ```
 python taskhub.py import --file <json路径> [--json]
 ```
 
-- 输入格式：`{"results": [...]}`，中文字段名（任务名称/所属项目/…/结果结论 + record_id）
-- 按 record_id 幂等：已存在则更新，不存在则插入；缺 record_id / 任务名称的坏行跳过并记入 `problems`
+- Input format: `{"results": [...]}` with Chinese field names (任务名称/所属项目/…/结果结论 + record_id)
+- Idempotent by record_id: existing rows updated, new rows inserted; rows missing record_id / 任务名称 are skipped and reported in `problems`
 
-### validate —— 自检
+### validate — Self check
 
 ```
 python taskhub.py validate [--json]
 ```
 
-检查数据库文件、表结构完整性与记录数。通过退出码 0，问题退出码 3。
+Checks database file, table schema integrity and record count. Exit 0 on pass, 3 on problems.
 
-## JSON 输出契约（--json）
+## JSON Output Contract (--json)
 
-成功（stdout 单行 JSON，保留中文原文）：
+Success (single-line JSON on stdout, Chinese preserved):
 
 ```jsonc
 {"ok": true, "mode": "add", "action": "created", "record_id": "...", "title": "..."}
@@ -195,58 +214,58 @@ python taskhub.py validate [--json]
 {"ok": true, "mode": "update", "action": "updated", "record_id": "...", "title": "...", "changed_fields": ["状态", "任务详情"]}
 {"ok": true, "mode": "close", "action": "closed", "record_id": "...", "title": "...", "finish_date": "2026-09-15"}
 {"ok": true, "mode": "close", "action": "skipped_already_done", "record_id": "...", "title": "..."}
-{"ok": true, "mode": "list", "count": 24, "total_in_db": 64, "tasks": [{"record_id": "...", "任务名称": "...", "所属项目": "...", "任务类型": "...", "优先级": "...", "状态": "...", "截止日期": "2026-09-08", "任务详情": "前200字..."}]}
+{"ok": true, "mode": "list", "count": 24, "total_in_db": 64, "tasks": [{"record_id": "...", "任务名称": "...", "所属项目": "...", "任务类型": "...", "优先级": "...", "状态": "...", "截止日期": "2026-09-08", "任务详情": "first 200 chars..."}]}
 ```
 
-失败：
+Failure:
 
 ```json
-{"ok": false, "error": "错误描述"}
+{"ok": false, "error": "error description"}
 ```
 
-## 退出码
+## Exit Codes
 
-| 码 | 含义 | 示例 |
+| Code | Meaning | Examples |
 |---|---|---|
-| 0 | 成功（含 skipped_duplicate / skipped_already_done 业务跳过） | add 查重跳过、close 已完成 |
-| 2 | 参数 / 校验错误 | 非法状态/优先级、日期格式错、记录不存在、close 缺 result、update 无字段 |
-| 3 | 数据库 / 运行时错误 | 数据库未初始化、表结构损坏、validate 未通过 |
+| 0 | Success (including skipped_duplicate / skipped_already_done business skips) | add duplicate skip, close already done |
+| 2 | Argument / validation error | invalid status/priority, bad date, unknown record, close without result, update without fields |
+| 3 | Database / runtime error | database not initialized, schema damaged, validate failed |
 
-## 字段与数据表
+## Fields & Schema
 
-字段合法值：优先级（高/中/低）、状态（待办/进行中/已搁置/已完成）；任务类型与所属项目为数据库托管的自定义字典（用户自建 + 自由文本自动注册）。
+Valid values: priority (高/中/低), status (待办/进行中/已搁置/已完成); task types and projects are user-managed database dictionaries (user-created + free-text auto-registration).
 
-tasks 表（SQLite）：
+tasks table (SQLite):
 
-| 列 | 语义 | 约束 |
+| Column | Meaning | Constraints |
 |---|---|---|
-| record_id | 记录ID | PRIMARY KEY，22 位随机串 |
-| title | 任务名称 | NOT NULL，业务主键 |
-| project | 所属项目 | 默认 其他 |
-| task_type | 任务类型 | 默认 日常事务 |
-| priority | 优先级 | 默认 中 |
-| status | 状态 | 默认 待办 |
-| start_date / deadline / finish_date | 开始/截止/完成日期 | YYYY-MM-DD，空=空串 |
-| detail | 任务详情 | 进度备注按行追加 |
-| result | 结果结论 | close 必填 |
-| created_at / updated_at | 审计时间戳 | 自动维护 |
+| record_id | Record ID | PRIMARY KEY, 22-char random string |
+| title | Task name | NOT NULL, business key |
+| project | Project | default 其他 |
+| task_type | Task type | default 日常事务 |
+| priority | Priority | default 中 |
+| status | Status | default 待办 |
+| start_date / deadline / finish_date | Start / due / finish dates | YYYY-MM-DD, empty = empty string |
+| detail | Details | progress notes appended line by line |
+| result | Result summary | required by close |
+| created_at / updated_at | Audit timestamps | maintained automatically |
 
-## 项目结构
+## Project Structure
 
 ```
 TaskHub/
-├── taskhub.py            # 核心业务 + CLI（全部业务逻辑，GUI 复用其函数）
-├── taskhub_gui_flet.py   # 桌面 GUI（Flet 原生窗口 · 双主题 · 中英双语）
-├── i18n.py               # GUI 双语文案层（仅显示层，CLI 契约不受影响）
-├── run.py                # 统一启动器：无参→桌面窗口（--web→浏览器）；有参→CLI
-├── build_exe.py          # PyInstaller 打包（onedir）
-├── TaskHub.spec          # PyInstaller 规格文件
-├── tests/                # unittest 测试（TASKHUB_DB 指向临时库，不污染正式数据）
-└── data/                 # 运行时生成：taskhub.db（SQLite）、lang.json（界面语言偏好）
+├── taskhub.py            # Core business + CLI (all business logic; GUI reuses its functions)
+├── taskhub_gui_flet.py   # Desktop GUI (Flet native window · dual themes · bilingual)
+├── i18n.py               # GUI bilingual strings (display layer only; CLI contract unaffected)
+├── run.py                # Unified launcher: no args → desktop (--web → browser); args → CLI
+├── build_exe.py          # PyInstaller packaging (onedir)
+├── TaskHub.spec          # PyInstaller spec
+├── tests/                # unittest suite (TASKHUB_DB points to a temp database)
+└── data/                 # Generated at runtime: taskhub.db (SQLite), lang.json (UI language)
 ```
 
-## 常见问题
+## FAQ
 
-- **GBK 控制台中文乱码**：CLI 已自动切换 stdout 为 UTF-8；子进程调用方可加 `PYTHONIOENCODING=utf-8` 保险
-- **数据库不存在报错**：先 `python taskhub.py init`，或用 `TASKHUB_DB` 指定既有路径
-- **add 返回 skipped_duplicate**：库中已有同名未完结任务（归一化比较），属正常业务跳过，退出码仍为 0
+- **Garbled Chinese on GBK consoles**: the CLI already reconfigures stdout to UTF-8; subprocess callers can set `PYTHONIOENCODING=utf-8` for safety
+- **Database not found error**: run `python taskhub.py init` first, or point `TASKHUB_DB` to an existing path
+- **add returns skipped_duplicate**: an open task with the same (normalized) title exists — a normal business skip, exit code is still 0
