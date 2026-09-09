@@ -1144,11 +1144,14 @@ class TaskHubFlet:
         total = max(1, len(self.rows))
         kpis = [
             # (下钻 key, 文案键, 数值, 圆点/进度条用色板原色, 数字用深化变体)
-            ("overdue", "kpi_overdue", ov, C_RUST, C_RUST),
-            ("today", "kpi_today", today_cnt, C_YELLOW, C_YELLOW_D),
-            ("doing", "kpi_doing", doing, C_ORANGE, C_ORANGE_D),
-            ("todo", "kpi_todo", todo, C_BLUE, C_BLUE_D),
-            ("month", "kpi_month", month_done, C_GREEN, C_GREEN_D),
+            ("overdue", "kpi_overdue", ov, DANGER, DANGER),
+            ("today", "kpi_today", today_cnt, WARN, WARN),
+            ("doing", "kpi_doing", doing,
+             ST_FILL["进行中"], self.T["st_text"]["进行中"]),
+            ("todo", "kpi_todo", todo,
+             ST_FILL["待办"], self.T["st_text"]["待办"]),
+            ("month", "kpi_month", month_done,
+             ST_FILL["已完成"], self.T["st_text"]["已完成"]),
         ]
         kpi_row = ft.Row(spacing=12, controls=[
             self._kpi_card(key, label_key, val, dot, num, total)
@@ -2058,8 +2061,8 @@ class TaskHubFlet:
                             weight=ft.FontWeight.W_600, color=T["text"]))
         legend = ft.Row(spacing=12)
         for kind_key, color in (("cal_legend_deadline", DANGER),
-                                ("cal_legend_start", C_BLUE),
-                                ("cal_legend_finish", C_GREEN)):
+                                ("cal_legend_start", ST_FILL["待办"]),
+                                ("cal_legend_finish", ST_FILL["已完成"])):
             legend.controls.append(ft.Row([
                 ft.Container(width=8, height=8, border_radius=radius(4),
                              bgcolor=color),
