@@ -197,16 +197,16 @@ def icon(name: str) -> str:
         return getattr(ft.Icons, "CIRCLE")
 
 
-# 筛选区控件统一规格：140×44 圆角8 浅灰底 同色描边 同 padding，
-# 解决看板/台账筛选行的下拉框、文本框、按钮高度/视觉不一致问题。
-_FILTER_W = 140
-_FILTER_H = 44
-_FILTER_PAD = ft.Padding.symmetric(horizontal=12, vertical=8)
+# 筛选区控件统一规格（Apple 密集筛选栏降档）：120×36 圆角8 浅灰底 同色描边，
+# 按钮自适应宽度（去固定宽），解决窄窗口下最右按钮被截断的问题。
+_FILTER_W = 120
+_FILTER_H = 36
+_FILTER_PAD = ft.Padding.symmetric(horizontal=10, vertical=6)
 
 
 def _filter_dd_factory(T, values, value, on_change, width=_FILTER_W, fmt=None,
                        menu_height=None):
-    """统一规格的筛选下拉框：宽 140 高 44，圆角 8，浅灰底，与文本框同款。
+    """统一规格的筛选下拉框：宽 120 高 36，圆角 8，浅灰底，与文本框同款。
 
     fmt：内部值 → 显示文案的映射函数（i18n 显示层翻译用）。
     Dropdown.value 取的是 option 的 **key**（内部中文原值），text 仅用于
@@ -217,6 +217,7 @@ def _filter_dd_factory(T, values, value, on_change, width=_FILTER_W, fmt=None,
         options.append(ft.dropdown.Option(key=v, text=(fmt(v) if fmt else v)))
     return ft.Dropdown(
         value=value, width=width, height=_FILTER_H, text_size=12,
+        dense=True,  # M3 DropdownMenu 有最小高度约束，dense 才允许 36 矮行
         border_radius=radius(8), border_color=T["border"], border_width=1,
         focused_border_color=T["accent"],
         filled=True, fill_color=T["surface2"],
@@ -233,7 +234,7 @@ def _filter_dd_factory(T, values, value, on_change, width=_FILTER_W, fmt=None,
 
 
 def _filter_tf_factory(T, value, hint_text, on_change, width=_FILTER_W):
-    """统一规格的筛选文本框：与下拉框完全同款——140×44、圆角 8、浅灰底、
+    """统一规格的筛选文本框：与下拉框完全同款——120×36、圆角 8、浅灰底、
     1px 描边；焦点时主题色描边、光标主题色，保证两者等宽等高、行内居中对齐。"""
     return ft.TextField(
         value=value, width=width, height=_FILTER_H, text_size=12,
@@ -248,11 +249,11 @@ def _filter_tf_factory(T, value, hint_text, on_change, width=_FILTER_W):
 
 def _filter_btn_factory(T, label, icon_name, on_click, *, width=None,
                         primary=False):
-    """统一规格的筛选按钮：与顶栏「刷新」同款——胶囊形（StadiumBorder）、
-    白底、主题色描边与文字；高 44 与下拉/文本框同排对齐。
-    primary=True 时为深绿主按钮（同「新增任务」）。"""
+    """统一规格的筛选按钮：胶囊形（StadiumBorder）、utility 描边、自适应
+    宽度（content+padding），高 36 与下拉/文本框同排对齐。
+    primary=True 时为 Action Blue 主按钮。"""
     btn_inner = ft.Row([
-        ft.Icon(icon(icon_name), size=16,
+        ft.Icon(icon(icon_name), size=14,
                 color=T["on_accent"] if primary else T["text"])
         if icon_name else ft.Container(),
         ft.Container(width=4) if icon_name else ft.Container(),
@@ -262,7 +263,6 @@ def _filter_btn_factory(T, label, icon_name, on_click, *, width=None,
                 no_wrap=True),
     ], tight=True, spacing=2)
     style = _btn_style_token(T, "primary" if primary else "utility")
-    # 覆盖高度为筛选行统一 44（token 工厂默认 padding 即适配）
     return (ft.FilledButton if primary else ft.OutlinedButton)(
         content=btn_inner, width=width, height=_FILTER_H,
         style=style, on_click=on_click)
@@ -489,7 +489,7 @@ class TaskHubFlet:
             ]),
         )
         self.search_field = ft.TextField(
-            width=250, height=44, text_size=13, hint_text=tr("search_hint"),
+            width=220, height=36, text_size=13, hint_text=tr("search_hint"),
             value=self.lt_kw,
             prefix_icon=icon("search"), border_radius=radius(R["pill"]),
             border_color=self.T["border"], filled=True,
@@ -554,7 +554,7 @@ class TaskHubFlet:
                 ft.Text(tr("lang_switch_to"), size=13,
                         weight=ft.FontWeight.W_600, no_wrap=True),
             ], tight=True, spacing=2),
-            height=42,
+            height=36,
             tooltip=tr("tip_language"),
             style=ft.ButtonStyle(
                 shape=ft.StadiumBorder(),
@@ -1509,7 +1509,7 @@ class TaskHubFlet:
             _filter_btn_factory(
                 T, tr("flt_clear_filters"), "filter_alt_off",
                 lambda e: self._board_clear()),
-        ], spacing=16, scroll=ft.ScrollMode.AUTO,
+        ], spacing=10, scroll=ft.ScrollMode.AUTO,
            vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
         cols = []
@@ -1744,27 +1744,27 @@ class TaskHubFlet:
         # 升序 / 导出按钮：与筛选行同高 44，胶囊同款（同「刷新」），避免视觉错落
         dir_btn = _filter_btn_factory(
             T, (tr("btn_asc") if self.lt_asc else tr("btn_desc")), "sort",
-            lambda e: self._lt_sort(None, not self.lt_asc), width=110)
+            lambda e: self._lt_sort(None, not self.lt_asc))
         export_btn = _filter_btn_factory(
             T, tr("btn_export_csv"), "download",
-            lambda e: self._export_csv(), width=130)
+            lambda e: self._export_csv())
         # 「新增项目 / 新增任务类型」快捷入口：台账顶栏（导出 CSV 左侧）
         add_proj_btn = _filter_btn_factory(
             T, tr("add_proj_btn"), "folder_open",
-            lambda e: self._open_add_dict("proj"), width=140)
+            lambda e: self._open_add_dict("proj"))
         add_type_btn = _filter_btn_factory(
             T, tr("add_type_btn"), "label",
-            lambda e: self._open_add_dict("type"), width=150)
+            lambda e: self._open_add_dict("type"))
 
         filter_bar = ft.Row([
             f_status, f_proj, f_type, f_pri, f_quick,
             ft.Container(expand=True), export_btn,
-        ], spacing=16, scroll=ft.ScrollMode.AUTO,
+        ], spacing=10, scroll=ft.ScrollMode.AUTO,
            vertical_alignment=ft.CrossAxisAlignment.CENTER)
         sort_bar = ft.Row([
             sort_dd, kw, overdue_chk, clear_btn,
             ft.Container(expand=True), dir_btn, add_proj_btn, add_type_btn,
-        ], spacing=16, vertical_alignment=ft.CrossAxisAlignment.CENTER)
+        ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
         table_card = ft.Container(
             expand=True, bgcolor=T["surface"], border_radius=radius(R["lg"]),
