@@ -208,6 +208,10 @@ def _filter_dd_factory(T, values, value, on_change, width=_FILTER_W, fmt=None,
                        menu_height=None):
     """统一规格的筛选下拉框：宽 120 高 36，圆角 8，浅灰底，与文本框同款。
 
+    ⚠️ Flet 0.86 新版 M3 Dropdown 的 height 属性压不矮字段（GitHub #5215，
+    dense 也只能到 ~46），唯一可靠做法：Container(固定宽高) +
+    Dropdown(dense=True, expand=True)，由 Container 裁掉 M3 溢出。
+
     fmt：内部值 → 显示文案的映射函数（i18n 显示层翻译用）。
     Dropdown.value 取的是 option 的 **key**（内部中文原值），text 仅用于
     展示，因此筛选 / 写入 / 排序逻辑拿到的仍是中文原值。
@@ -215,21 +219,23 @@ def _filter_dd_factory(T, values, value, on_change, width=_FILTER_W, fmt=None,
     options = []
     for v in values:
         options.append(ft.dropdown.Option(key=v, text=(fmt(v) if fmt else v)))
-    return ft.Dropdown(
-        value=value, width=width, height=_FILTER_H, text_size=12,
-        dense=True,  # M3 DropdownMenu 有最小高度约束，dense 才允许 36 矮行
-        border_radius=radius(8), border_color=T["border"], border_width=1,
-        focused_border_color=T["accent"],
-        filled=True, fill_color=T["surface2"],
-        menu_height=menu_height,
-        menu_style=ft.MenuStyle(
-            bgcolor=ft.Colors.with_opacity(0.82, T["surface"]),
-            elevation=0,
-            shape=ft.RoundedRectangleBorder(radius=radius(8)),
-            side=ft.BorderSide(1, T["border"])),
-        content_padding=_FILTER_PAD,
-        options=options,
-        on_select=on_change,
+    return ft.Container(
+        width=width, height=_FILTER_H,
+        content=ft.Dropdown(
+            value=value, dense=True, expand=True, text_size=12,
+            border_radius=radius(8), border_color=T["border"], border_width=1,
+            focused_border_color=T["accent"],
+            filled=True, fill_color=T["surface2"],
+            menu_height=menu_height,
+            menu_style=ft.MenuStyle(
+                bgcolor=ft.Colors.with_opacity(0.82, T["surface"]),
+                elevation=0,
+                shape=ft.RoundedRectangleBorder(radius=radius(8)),
+                side=ft.BorderSide(1, T["border"])),
+            content_padding=ft.Padding.symmetric(horizontal=10, vertical=2),
+            options=options,
+            on_select=on_change,
+        ),
     )
 
 
@@ -1985,12 +1991,17 @@ class TaskHubFlet:
             (tr("pager_info", n=len(rows), cur=self.lt_page, total=page_count)
              if rows else tr("pager_empty")),
             size=12, color=T["sub"])
-        size_dd = ft.Dropdown(
-            value=str(self.lt_pagesize), width=86, text_size=12, dense=True,
-            border_radius=radius(8), border_color=T["border"],
-            filled=True, fill_color=T["surface2"],
-            options=[ft.dropdown.Option(str(v)) for v in (20, 50, 100, 200)],
-            on_select=lambda e: self._lt_pagesize(int(e.control.value)))
+        size_dd = ft.Container(
+            width=86, height=36,
+            content=ft.Dropdown(
+                value=str(self.lt_pagesize), dense=True, expand=True,
+                text_size=12,
+                border_radius=radius(8), border_color=T["border"],
+                filled=True, fill_color=T["surface2"],
+                content_padding=ft.Padding.symmetric(horizontal=8, vertical=2),
+                options=[ft.dropdown.Option(str(v)) for v in (20, 50, 100, 200)],
+                on_select=lambda e: self._lt_pagesize(int(e.control.value))),
+        )
         return ft.Row([
             info, ft.Container(expand=True),
             ft.Text(tr("pager_size"), size=12, color=T["faint"]), size_dd,
