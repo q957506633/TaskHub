@@ -42,60 +42,120 @@ from i18n import (  # noqa: E402
     weekday_name,
 )
 
-APP_VERSION = "TaskHub v4.8"
+APP_VERSION = "TaskHub v4.9"
 
 # ---------------------------------------------------------------------------
-# 语义色板 —— 「高级感」五色（用户指定，2026-09）：
-#   青苔绿 #59A55D · 柔黄 #EFDB56 · 雾蓝 #7D9DC6 · 暖橙 #ECA23F · 赭红 #CA4D2A
-# 浅色主题里小号文字 / 数字用 *_D 深化变体（对白底 ≥4.5:1，WCAG AA）；
-# 深色主题里用 *_L 提亮变体。中性底色整体偏暖，呼应色板的低饱和气质。
+# Apple 设计语言令牌（视觉宪法，2026-09-09 重构）
+# 单一点缀色 Action Blue + 大留白 + 负字距标题 + 表面色彩做分区
+# 权威来源：SKILL flet-desktop-ui → references/apple-design-tokens.md
 # ---------------------------------------------------------------------------
 
-C_GREEN = "#59a55d"
-C_YELLOW = "#efdb56"
-C_BLUE = "#7d9dc6"
-C_ORANGE = "#eca23f"
-C_RUST = "#ca4d2a"
-
-C_GREEN_D = "#3f7d45"
-C_YELLOW_D = "#7e6c10"
-C_BLUE_D = "#48628a"
-C_ORANGE_D = "#9a6210"
-
-C_GREEN_L = "#7cbe81"
-C_YELLOW_L = "#efe29a"
-C_BLUE_L = "#9fb9dc"
-C_ORANGE_L = "#f0bc72"
-C_RUST_L = "#e58a6f"
-
-_LIGHT = {
-    "bg": "#f3f5f0", "surface": "#ffffff", "surface2": "#f7f8f3",
-    "border": "#e4e8dd", "hover": "#eef1e8", "tint": "#e7f1e4",
-    "text": "#20261f", "sub": "#5d685c", "faint": "#8b948a",
-    "track": "#e9ece2",
-    "st_text": {"待办": C_BLUE_D, "进行中": C_ORANGE_D,
-                "已搁置": C_YELLOW_D, "已完成": C_GREEN_D},
-    "pr_text": {"高": C_RUST, "中": C_ORANGE_D, "低": "#6b756a"},
-}
-_DARK = {
-    "bg": "#101310", "surface": "#191d18", "surface2": "#212620",
-    "border": "#2b312a", "hover": "#252b24", "tint": "#243528",
-    "text": "#e9ede6", "sub": "#a4ada2", "faint": "#7d867b",
-    "track": "#2a302a",
-    "st_text": {"待办": C_BLUE_L, "进行中": C_ORANGE_L,
-                "已搁置": C_YELLOW_L, "已完成": C_GREEN_L},
-    "pr_text": {"高": C_RUST_L, "中": C_ORANGE_L, "低": "#9aa599"},
+# ---------- Apple 颜色（规范原值，勿改 hex） ----------
+A = {
+    "primary": "#0066cc", "primary_focus": "#0071e3", "primary_on_dark": "#2997ff",
+    "ink": "#1d1d1f", "body_muted": "#cccccc", "ink80": "#333333", "ink48": "#7a7a7a",
+    "divider_soft": "#f0f0f0", "hairline": "#e0e0e0",
+    "canvas": "#ffffff", "parchment": "#f5f5f7", "pearl": "#fafafc",
+    "tile1": "#272729", "tile2": "#2a2a2c", "tile3": "#252527",
+    "black": "#000000", "chip": "#d2d2d7",
+    # 语义色（补充，非规范）：仅作状态色，禁止当交互色
+    "success": "#34c759", "warn": "#ff9f0a", "danger": "#ff3b30",
 }
 
-PRIMARY = C_GREEN        # 品牌色：装饰 / 描边 / 图表 / 光标
-PRIMARY_DK = C_GREEN_D   # 白字实底、浅底小号绿字（对比度达标）
-ST_FILL = {"待办": C_BLUE, "进行中": C_ORANGE,
-           "已搁置": C_YELLOW, "已完成": C_GREEN}
-PR_FILL = {"高": C_RUST, "中": C_ORANGE, "低": "#8a94a0"}
-OK_GREEN = C_GREEN_D
-DANGER = C_RUST
-WARN = C_ORANGE_D
-BAR_PALETTE = [C_GREEN, C_BLUE, C_ORANGE, C_YELLOW, C_RUST,
+# ---------- 主题表（明暗；所有控件取色必须走 T，禁止硬编码） ----------
+def _apple_theme(dark: bool) -> dict:
+    if dark:
+        return {
+            "bg": A["black"], "surface": A["tile1"], "surface2": A["tile2"],
+            "surface3": A["tile3"],
+            "border": "#3a3a3c", "divider": "#333335",
+            "hover": "#1f1f21", "tint": "#2e2997ff", "track": A["tile2"],
+            "text": "#ffffff", "sub": A["body_muted"], "faint": A["ink48"],
+            "accent": A["primary_on_dark"], "on_accent": "#ffffff",
+            "st_text": {"待办": "#7fb3e0", "进行中": "#f0bc72",
+                        "已搁置": "#efe29a", "已完成": "#7cbe81"},
+            "pr_text": {"高": "#e58a6f", "中": "#f0bc72", "低": "#9aa599"},
+        }
+    return {
+        "bg": A["parchment"], "surface": A["canvas"], "surface2": A["parchment"],
+        "surface3": A["pearl"],
+        "border": A["hairline"], "divider": A["divider_soft"],
+        "hover": A["parchment"], "tint": "#1a0066cc", "track": A["divider_soft"],
+        "text": A["ink"], "sub": A["ink80"], "faint": A["ink48"],
+        "accent": A["primary"], "on_accent": "#ffffff",
+        "st_text": {"待办": "#48628a", "进行中": "#9a6210",
+                    "已搁置": "#7e6c10", "已完成": "#3f7d45"},
+        "pr_text": {"高": A["danger"], "中": A["warn"], "低": "#6b756a"},
+    }
+
+# 旧别名（过渡期兼容引用，新代码用 T["accent"]）
+_LIGHT = _apple_theme(False)
+_DARK  = _apple_theme(True)
+
+# ---------- 圆角 / 间距 ----------
+R = {"none": 0, "xs": 5, "sm": 8, "md": 11, "lg": 18, "pill": 9999}
+S = {"xxs": 4, "xs": 8, "sm": 12, "md": 16, "lg": 24, "xl": 32}
+
+# ---------- 字体 ----------
+FONT_FAMILY = "system-ui, -apple-system, 'Segoe UI', sans-serif"
+
+def _ts(size, weight=400, height=None, ls=None):
+    """Apple 排版工厂：字重只取 300/400/600/700。"""
+    return ft.TextStyle(
+        font_family=FONT_FAMILY,
+        size=size,
+        weight=getattr(ft.FontWeight, f"W_{weight}", ft.FontWeight.W_400),
+        height=height, letter_spacing=ls,
+    )
+
+# 桌面降档字号（web → 桌面）
+TYPE = {
+    "body":           dict(size=13, weight=400, height=1.47, ls=-0.29),
+    "body_strong":    dict(size=13, weight=600, height=1.24, ls=-0.29),
+    "caption":        dict(size=12, weight=400, height=1.43, ls=-0.19),
+    "caption_strong": dict(size=12, weight=600, height=1.29, ls=-0.19),
+    "fine":           dict(size=11, weight=400, height=1.0,  ls=0.0),
+    "tagline":        dict(size=16, weight=600, height=1.19, ls=0.18),
+    "display":        dict(size=20, weight=600, height=1.10, ls=0.0),
+}
+
+# ---------- 按钮样式工厂（elevation=0 是硬要求） ----------
+def _btn_style_token(T, kind="primary"):
+    if kind == "primary":
+        return ft.ButtonStyle(
+            shape=ft.StadiumBorder(),
+            bgcolor=T["accent"], color="#ffffff",
+            padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+            elevation=0,
+            text_style=_ts(**TYPE["caption_strong"]),
+        )
+    if kind == "secondary":
+        return ft.ButtonStyle(
+            shape=ft.StadiumBorder(),
+            bgcolor=ft.Colors.TRANSPARENT, color=T["accent"],
+            side={ft.ControlState.DEFAULT: ft.BorderSide(1, T["accent"])},
+            padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+            elevation=0,
+            text_style=_ts(**TYPE["caption_strong"]),
+        )
+    # utility：surface3 底 + 主题描边 + 主题文字
+    return ft.ButtonStyle(
+        shape=ft.StadiumBorder(),
+        bgcolor=T["surface3"], color=T["text"],
+        side={ft.ControlState.DEFAULT: ft.BorderSide(1, T["border"])},
+        padding=ft.Padding.symmetric(horizontal=14, vertical=8),
+        elevation=0,
+        text_style=_ts(**TYPE["caption"]),
+    )
+
+# ---------- 语义状态色（图表/徽章/状态指示，禁止当交互色） ----------
+ST_FILL = {"待办": "#7d9dc6", "进行中": "#eca23f",
+           "已搁置": "#efdb56", "已完成": "#59a55d"}
+PR_FILL = {"高": "#ca4d2a", "中": "#eca23f", "低": "#8a94a0"}
+OK_GREEN = A["success"]
+DANGER = A["danger"]
+WARN = A["warn"]
+BAR_PALETTE = ["#59a55d", "#7d9dc6", "#eca23f", "#efdb56", "#ca4d2a",
                "#4c9051", "#9fb9dc", "#8a94a0"]
 
 # 导航项：第二个元素为 i18n 文案键（改文案只动 i18n.py）
@@ -158,7 +218,7 @@ def _filter_dd_factory(T, values, value, on_change, width=_FILTER_W, fmt=None,
     return ft.Dropdown(
         value=value, width=width, height=_FILTER_H, text_size=12,
         border_radius=radius(8), border_color=T["border"], border_width=1,
-        focused_border_color=PRIMARY,
+        focused_border_color=T["accent"],
         filled=True, fill_color=T["surface2"],
         menu_height=menu_height,
         menu_style=ft.MenuStyle(
@@ -178,7 +238,7 @@ def _filter_tf_factory(T, value, hint_text, on_change, width=_FILTER_W):
     return ft.TextField(
         value=value, width=width, height=_FILTER_H, text_size=12,
         border_radius=radius(8), border_color=T["border"], border_width=1,
-        focused_border_color=PRIMARY, cursor_color=PRIMARY,
+        focused_border_color=T["accent"], cursor_color=T["accent"],
         filled=True, fill_color=T["surface2"],
         content_padding=_FILTER_PAD,
         hint_text=hint_text,
@@ -192,27 +252,20 @@ def _filter_btn_factory(T, label, icon_name, on_click, *, width=None,
     白底、主题色描边与文字；高 44 与下拉/文本框同排对齐。
     primary=True 时为深绿主按钮（同「新增任务」）。"""
     btn_inner = ft.Row([
-        ft.Icon(icon(icon_name), size=16) if icon_name else ft.Container(),
+        ft.Icon(icon(icon_name), size=16,
+                color=T["on_accent"] if primary else T["text"])
+        if icon_name else ft.Container(),
         ft.Container(width=4) if icon_name else ft.Container(),
-        ft.Text(label, size=12, weight=ft.FontWeight.W_600, no_wrap=True),
+        ft.Text(label, size=12,
+                weight=ft.FontWeight.W_600,
+                color=T["on_accent"] if primary else T["text"],
+                no_wrap=True),
     ], tight=True, spacing=2)
-    kw = dict(
-        content=btn_inner,
-        width=width, height=_FILTER_H,
-        style=ft.ButtonStyle(
-            shape=ft.StadiumBorder(),
-            padding=ft.Padding.symmetric(horizontal=14, vertical=8),
-            side={ft.ControlState.DEFAULT: ft.BorderSide(
-                1, PRIMARY_DK if primary else T["border"])},
-            color={ft.ControlState.DEFAULT: "white" if primary
-                   else T["text"]},
-            bgcolor={ft.ControlState.DEFAULT:
-                     PRIMARY_DK if primary else T["surface"]},
-            text_style=ft.TextStyle(size=12, weight=ft.FontWeight.W_600),
-        ),
-        on_click=on_click,
-    )
-    return (ft.FilledButton if primary else ft.OutlinedButton)(**kw)
+    style = _btn_style_token(T, "primary" if primary else "utility")
+    # 覆盖高度为筛选行统一 44（token 工厂默认 padding 即适配）
+    return (ft.FilledButton if primary else ft.OutlinedButton)(
+        content=btn_inner, width=width, height=_FILTER_H,
+        style=style, on_click=on_click)
 
 
 # 筛选下拉里「非数据值」的固定项：先走 dfilter（全部 → All），
@@ -312,9 +365,9 @@ class TaskHubFlet:
         # 主题赋值抛 TypeError —— 此处若被 try/except 吞掉，字体即失效。
         p = self.page
         theme = ft.Theme(
-            font_family="Microsoft YaHei",
+            font_family=FONT_FAMILY,
             color_scheme=ft.ColorScheme(
-                primary=PRIMARY, surface=self.T["surface"]),
+                primary=self.T["accent"], surface=self.T["surface"]),
         )
         p.theme = theme
         p.theme_dark = theme
@@ -436,12 +489,12 @@ class TaskHubFlet:
             ]),
         )
         self.search_field = ft.TextField(
-            width=250, height=42, text_size=13, hint_text=tr("search_hint"),
+            width=250, height=44, text_size=13, hint_text=tr("search_hint"),
             value=self.lt_kw,
-            prefix_icon=icon("search"), border_radius=radius(16),
+            prefix_icon=icon("search"), border_radius=radius(R["pill"]),
             border_color=self.T["border"], filled=True,
             fill_color=self.T["surface2"],
-            cursor_color=PRIMARY, content_padding=ft.Padding.only(left=8, right=12),
+            cursor_color=self.T["accent"], content_padding=ft.Padding.only(left=8, right=12),
             on_submit=lambda e: self._search_submit(e.control.value),
         )
         topbar = ft.Container(
@@ -516,10 +569,10 @@ class TaskHubFlet:
 
     def _brand(self):
         logo = ft.Container(
-            width=38, height=38, border_radius=radius(12), bgcolor=PRIMARY_DK,
+            width=38, height=38, border_radius=radius(11), bgcolor=self.T["accent"],
             alignment=ft.Alignment.CENTER,
             content=ft.Text(tr("brand_logo"), color="white", size=16,
-                            weight=ft.FontWeight.W_700),
+                            weight=ft.FontWeight.W_600),
         )
         return ft.Container(
             padding=ft.Padding.only(left=8, bottom=16),
@@ -527,9 +580,9 @@ class TaskHubFlet:
                 logo,
                 ft.Container(width=10),
                 ft.Column([ft.Text(tr("brand_name"), size=16,
-                                   weight=ft.FontWeight.W_700,
+                                   weight=ft.FontWeight.W_600,
                                    color=self.T["text"]),
-                           ft.Text(APP_VERSION, size=10, color=self.T["faint"])],
+                           ft.Text(APP_VERSION, size=11, color=self.T["faint"])],
                           spacing=1),
             ]),
         )
@@ -547,12 +600,12 @@ class TaskHubFlet:
                     on_hover=lambda e, v=vid: self._nav_hover(e, v),
                     content=ft.Row([
                         ft.Icon(icon(ico), size=16,
-                                color=PRIMARY_DK if selected else self.T["sub"]),
+                                color=self.T["accent"] if selected else self.T["sub"]),
                         ft.Container(width=10),
-                        ft.Text(tr(key), size=14,
+                        ft.Text(tr(key), size=13,
                                 weight=ft.FontWeight.W_600 if selected
-                                else ft.FontWeight.W_500,
-                                color=PRIMARY_DK if selected else self.T["text"]),
+                                else ft.FontWeight.W_400,
+                                color=self.T["accent"] if selected else self.T["text"]),
                     ]),
                 ))
         self.page.update()
@@ -571,16 +624,8 @@ class TaskHubFlet:
         self._render_view()
 
     def _btn_style(self, fill: bool):
-        return ft.ButtonStyle(
-            shape=ft.StadiumBorder(),
-            padding=ft.Padding.symmetric(horizontal=16, vertical=16),
-            bgcolor={ft.ControlState.DEFAULT:
-                     PRIMARY_DK if fill else self.T["surface"]},
-            color={ft.ControlState.DEFAULT: "white" if fill else self.T["text"]},
-            side={ft.ControlState.DEFAULT:
-                  ft.BorderSide(1, self.T["border"])} if not fill else None,
-            text_style=ft.TextStyle(size=14, weight=ft.FontWeight.W_600),
-        )
+        """主按钮=Action Blue pill；次要=utility（surface3+描边）。elevation=0。"""
+        return _btn_style_token(self.T, "primary" if fill else "utility")
 
     # ------------------------------------------------------------------
     # 数据
@@ -678,24 +723,24 @@ class TaskHubFlet:
         icon = (app.get("icon_path") or "").strip()
         if icon and os.path.isfile(icon):
             return ft.Container(
-                width=size, height=size, border_radius=radius(12),
+                width=size, height=size, border_radius=radius(R["md"]),
                 clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
                 content=ft.Image(src=icon, width=size, height=size,
                                   fit=ft.ImageFit.CONTAIN),
             )
         letter = (app.get("name") or "?").strip()[:2] or "?"
         return ft.Container(
-            width=size, height=size, border_radius=radius(12),
+            width=size, height=size, border_radius=radius(R["md"]),
             bgcolor=self._app_avatar_color(app.get("name", "")),
             alignment=ft.Alignment.CENTER,
-            content=ft.Text(letter, color="white", size=18,
-                                weight=ft.FontWeight.W_700),
+            content=ft.Text(letter, color="white", size=16,
+                                weight=ft.FontWeight.W_600),
         )
 
     def _build_app_rail(self):
         T = self.T
         items = [ft.Container(
-            width=56, height=56, border_radius=radius(16),
+            width=56, height=56, border_radius=radius(R["md"]),
             bgcolor=T["surface2"], alignment=ft.Alignment.CENTER,
             content=ft.Icon(icon("add"), size=22, color=T["sub"]),
             on_click=lambda e: self._dlg_app_edit(),
@@ -704,7 +749,7 @@ class TaskHubFlet:
         if not self._apps:
             items.append(ft.Container(
                 width=56, padding=ft.Padding.symmetric(vertical=6, horizontal=4),
-                content=ft.Text(tr("app_no_apps_yet"), size=10,
+                content=ft.Text(tr("app_no_apps_yet"), size=11,
                                  color=T["faint"],
                                  text_align=ft.TextAlign.CENTER),
             ))
@@ -1000,7 +1045,7 @@ class TaskHubFlet:
             modal=True, bgcolor=T["surface"],
             shape=ft.RoundedRectangleBorder(radius=20),
             title=ft.Text(tr(f"manage_{kind}_title"), size=16,
-                          weight=ft.FontWeight.W_700, color=T["text"]),
+                          weight=ft.FontWeight.W_600, color=T["text"]),
             content=ft.Container(width=420, content=ft.Column([
                 ft.Text(tr(f"manage_{kind}_list_hint"), size=12, color=T["sub"]),
                 list_col,
@@ -1056,7 +1101,7 @@ class TaskHubFlet:
             modal=False, bgcolor=T["surface"],
             shape=ft.RoundedRectangleBorder(radius=20),
             title=ft.Text(tr(f"add_{kind}_btn"), size=16,
-                          weight=ft.FontWeight.W_700, color=T["text"]),
+                          weight=ft.FontWeight.W_600, color=T["text"]),
             content=ft.Container(width=420, content=ft.Column([
                 ft.Text(tr(f"manage_{kind}_list_hint"), size=12,
                         color=T["sub"]),
@@ -1128,7 +1173,7 @@ class TaskHubFlet:
         T = self.T
         pct = min(100, max(2, round(val / total * 100)))
         return ft.Container(
-            expand=True, bgcolor=T["surface"], border_radius=radius(16),
+            expand=True, bgcolor=T["surface"], border_radius=radius(R["lg"]),
             border=ft.Border.all(1, T["border"]),
             padding=16, on_click=lambda e, k=key: self._drill_kpi(k),
             on_hover=lambda e, c=None: self._card_hover(e),
@@ -1137,7 +1182,7 @@ class TaskHubFlet:
                                      bgcolor=dot),
                         ft.Container(width=6),
                         ft.Text(tr(label), size=12, color=T["sub"])]),
-                ft.Text(str(val), size=28, weight=ft.FontWeight.W_700,
+                ft.Text(str(val), size=20, weight=ft.FontWeight.W_600,
                         color=num),
                 ft.Row(spacing=0, controls=[
                     ft.Container(height=5, border_radius=radius(4),
@@ -1150,23 +1195,20 @@ class TaskHubFlet:
     def _card_hover(self, e):
         hot = e.data in (True, "true", "True")
         T = self.T
-        e.control.shadow = ft.BoxShadow(
-            blur_radius=22, spread_radius=0,
-            color=ft.Colors.with_opacity(0.14, "#000000"),
-            offset=ft.Offset(0, 8)) if hot else None
+        e.control.shadow = None
         e.control.border = ft.Border(*[ft.BorderSide(
-            1, PRIMARY if hot else T["border"])] * 4)
+            1, T["accent"] if hot else T["border"])] * 4)
         self.page.update()
 
     def _card_shell(self, title, hint, content, height=None, expand=None):
         T = self.T
         return ft.Container(
             expand=expand, height=height, bgcolor=T["surface"],
-            border_radius=radius(16),
+            border_radius=radius(R["lg"]),
             border=ft.Border.all(1, T["border"]),
             padding=ft.Padding.only(left=16, right=16, top=16, bottom=16),
             content=ft.Column(spacing=8, controls=[
-                ft.Row([ft.Text(title, size=14, weight=ft.FontWeight.W_700,
+                ft.Row([ft.Text(title, size=13, weight=ft.FontWeight.W_600,
                                 color=T["text"]),
                         ft.Container(expand=True),
                         ft.Text(hint, size=12, color=T["faint"])]),
@@ -1219,21 +1261,21 @@ class TaskHubFlet:
             center = ft.Container(
                 width=190, height=190, alignment=ft.Alignment.CENTER,
                 content=ft.Column([
-                    ft.Text(str(total), size=24, weight=ft.FontWeight.W_700,
+                    ft.Text(str(total), size=20, weight=ft.FontWeight.W_600,
                             color=T["text"]),
-                    ft.Text(tr("dash_all_tasks"), size=10, color=T["sub"]),
+                    ft.Text(tr("dash_all_tasks"), size=11, color=T["sub"]),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                    spacing=0, tight=True),
             )
             chart_box = ft.Stack([chart, center])
         else:
             chart_box = ft.Container(
-                width=190, height=190, border_radius=radius(95),
+                width=190, height=190, border_radius=radius(R["pill"]),
                 bgcolor=T["track"], alignment=ft.Alignment.CENTER,
                 content=ft.Column([
-                    ft.Text(str(total), size=24, weight=ft.FontWeight.W_700,
+                    ft.Text(str(total), size=20, weight=ft.FontWeight.W_600,
                             color=T["text"]),
-                    ft.Text(tr("dash_all_tasks"), size=10, color=T["sub"]),
+                    ft.Text(tr("dash_all_tasks"), size=11, color=T["sub"]),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                    spacing=0, tight=True))
 
@@ -1286,12 +1328,12 @@ class TaskHubFlet:
         # 逾期/今天/临近 的分类色标仍在，仅不再参与排序。
         focus.sort(key=lambda t: (t[2].get("created_at") or ""), reverse=True)
 
-        head = ft.Row([ft.Text(tr("dash_focus_title"), size=14,
-                               weight=ft.FontWeight.W_700, color=T["text"]),
+        head = ft.Row([ft.Text(tr("dash_focus_title"), size=13,
+                               weight=ft.FontWeight.W_600, color=T["text"]),
                        ft.Container(expand=True),
                        ft.Container(
                            bgcolor=ft.Colors.with_opacity(0.12, DANGER),
-                           border_radius=radius(20),
+                           border_radius=radius(R["pill"]),
                            padding=ft.Padding.symmetric(horizontal=12, vertical=4),
                            content=ft.Text(tr("dash_focus_count", n=len(focus)),
                                            size=12, color=DANGER,
@@ -1301,7 +1343,7 @@ class TaskHubFlet:
             body: ft.Control = ft.Container(
                 alignment=ft.Alignment.CENTER, expand=True,
                 content=ft.Column([
-                    ft.Text(tr("dash_focus_none1"), size=14,
+                    ft.Text(tr("dash_focus_none1"), size=13,
                             weight=ft.FontWeight.W_600, color=OK_GREEN),
                     ft.Text(tr("dash_focus_none2"), size=12, color=T["faint"]),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER))
@@ -1310,7 +1352,7 @@ class TaskHubFlet:
             label_keys = ("tag_overdue", "tag_today", "tag_soon")
             meta_keys = ("focus_overdue", "focus_today", "focus_soon")
             for cat, left, r in focus[:60]:
-                color = (DANGER, WARN, PRIMARY_DK)[cat]
+                color = (DANGER, WARN, self.T["accent"])[cat]
                 label = tr(label_keys[cat])
                 meta = tr(meta_keys[cat], n=(-left if cat == 0 else left),
                           date=r["deadline"])
@@ -1318,7 +1360,7 @@ class TaskHubFlet:
             body = ft.ListView(expand=True, spacing=4, controls=items)
 
         return ft.Container(
-            expand=7, height=208, bgcolor=T["surface"], border_radius=radius(16),
+            expand=7, height=208, bgcolor=T["surface"], border_radius=radius(R["lg"]),
             border=ft.Border.all(1, T["border"]),
             padding=ft.Padding.only(left=16, right=16, top=16, bottom=16),
             content=ft.Column([head, ft.Text(tr("dash_focus_sub"), size=12,
@@ -1336,21 +1378,21 @@ class TaskHubFlet:
                 ft.Container(width=3, height=34, border_radius=radius(2),
                              bgcolor=color),
                 ft.Container(width=8),
-                ft.Column([ft.Text(r["title"], size=14,
+                ft.Column([ft.Text(r["title"], size=13,
                                    weight=ft.FontWeight.W_600, color=T["text"],
                                    max_lines=1,
                                    overflow=ft.TextOverflow.ELLIPSIS,
                                    expand=True),
                            ft.Text(f"{meta} · {r['project']} · "
                                    f"{dstatus(r['status'])}",
-                                   size=10, color=T["sub"], max_lines=1,
+                                   size=11, color=T["sub"], max_lines=1,
                                    overflow=ft.TextOverflow.ELLIPSIS,
                                    expand=True)],
                           spacing=2, expand=True),
                 ft.Container(width=6),
                 ft.Container(bgcolor=color, border_radius=radius(4),
                              padding=ft.Padding.symmetric(horizontal=8, vertical=2),
-                             content=ft.Text(label, size=10, color="white",
+                             content=ft.Text(label, size=11, color="white",
                                              weight=ft.FontWeight.W_600)),
             ]),
         )
@@ -1534,7 +1576,7 @@ class TaskHubFlet:
                 border_radius=radius(8),
                 content=ft.Text(tr("board_done_more", limit=BOARD_DONE_LIMIT,
                                    n=hidden),
-                                size=12, color=PRIMARY_DK,
+                                size=12, color=self.T["accent"],
                                 weight=ft.FontWeight.W_600)))
         if not arr:
             tiles.append(ft.Container(
@@ -1542,7 +1584,7 @@ class TaskHubFlet:
                 content=ft.Column([
                     ft.Text(tr("board_empty1"), size=12, color=T["faint"]),
                     ft.Text(tr("board_empty2", new=tr("btn_new_task")),
-                            size=10, color=T["faint"]),
+                            size=11, color=T["faint"]),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2)))
 
         header = ft.Container(
@@ -1551,11 +1593,11 @@ class TaskHubFlet:
                 ft.Container(width=8, height=8, border_radius=radius(4),
                              bgcolor=ST_FILL[st]),
                 ft.Container(width=6),
-                ft.Text(dstatus(st), size=14, weight=ft.FontWeight.W_700,
+                ft.Text(dstatus(st), size=13, weight=ft.FontWeight.W_600,
                         color=T["text"]),
                 ft.Container(expand=True),
                 ft.Container(bgcolor=ft.Colors.with_opacity(0.12, ST_FILL[st]),
-                             border_radius=radius(20),
+                             border_radius=radius(R["pill"]),
                              padding=ft.Padding.symmetric(horizontal=8, vertical=2),
                              content=ft.Text(str(len(arr)), size=12,
                                              color=T["st_text"][st],
@@ -1568,7 +1610,7 @@ class TaskHubFlet:
         )
         return ft.Container(
             expand=True, height=col_h, bgcolor=T["surface"],
-            border_radius=radius(16),
+            border_radius=radius(R["lg"]),
             border=ft.Border.all(1, T["border"]),
             content=ft.Column([header,
                                ft.ListView(expand=True, spacing=8,
@@ -1597,31 +1639,31 @@ class TaskHubFlet:
             elif left <= 3:
                 dtxt, dcolor = tr("tile_left", n=left, date=dl), WARN
             elif left <= 7:
-                dtxt, dcolor = tr("tile_left", n=left, date=dl), PRIMARY_DK
+                dtxt, dcolor = tr("tile_left", n=left, date=dl), self.T["accent"]
             else:
                 dtxt, dcolor = dl, T["sub"]
 
         chips = ft.Row(spacing=4, wrap=False)
         for text, bg, fg in (
                 (r["project"], T["track"], T["sub"]),
-                (r["task_type"], ft.Colors.with_opacity(0.10, PRIMARY),
-                 PRIMARY_DK),
+                (r["task_type"], ft.Colors.with_opacity(0.10, self.T["accent"]),
+                 self.T["accent"]),
                 (dpriority(r["priority"]),
                  ft.Colors.with_opacity(0.10, PR_FILL[r["priority"]]),
                  T["pr_text"][r["priority"]])):
             chips.controls.append(ft.Container(
                 bgcolor=bg, border_radius=radius(4),
                 padding=ft.Padding.symmetric(horizontal=8, vertical=2),
-                content=ft.Text(text, size=10, color=fg, max_lines=1,
+                content=ft.Text(text, size=11, color=fg, max_lines=1,
                                 overflow=ft.TextOverflow.ELLIPSIS)))
 
         return ft.Container(
-            bgcolor=T["surface2"], border_radius=radius(12), padding=10,
+            bgcolor=T["surface2"], border_radius=radius(R["md"]), padding=10,
             border=ft.Border.all(1, T["border"]),
             on_click=lambda e, rid=r["record_id"]: self._open_detail(rid),
             on_hover=lambda e: self._tile_hover(e),
             content=ft.Column(spacing=8, controls=[
-                ft.Text(r["title"], size=14, weight=ft.FontWeight.W_600,
+                ft.Text(r["title"], size=13, weight=ft.FontWeight.W_600,
                         color=T["text"], max_lines=2,
                         overflow=ft.TextOverflow.ELLIPSIS),
                 chips,
@@ -1634,7 +1676,7 @@ class TaskHubFlet:
         T = self.T
         e.control.bgcolor = T["tint"] if hot else T["surface2"]
         e.control.border = ft.Border(*[ft.BorderSide(
-            1, PRIMARY if hot else T["border"])] * 4)
+            1, T["accent"] if hot else T["border"])] * 4)
         self.page.update()
 
     # ------------------------------------------------------------------
@@ -1688,7 +1730,7 @@ class TaskHubFlet:
         overdue_chk = ft.Checkbox(
             label=tr("flt_only_overdue"), value=self.lt_overdue,
             label_style=ft.TextStyle(size=12),
-            label_position=ft.LabelPosition.RIGHT, active_color=PRIMARY,
+            label_position=ft.LabelPosition.RIGHT, active_color=self.T["accent"],
             on_change=lambda e: self._lt_filter("overdue", e.control.value))
         clear_btn = _filter_btn_factory(
             T, tr("flt_clear"), "filter_alt_off", lambda e: self._lt_clear())
@@ -1722,7 +1764,7 @@ class TaskHubFlet:
         ], spacing=16, vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
         table_card = ft.Container(
-            expand=True, bgcolor=T["surface"], border_radius=radius(16),
+            expand=True, bgcolor=T["surface"], border_radius=radius(R["lg"]),
             border=ft.Border.all(1, T["border"]),
             padding=ft.Padding.only(left=8, right=8, top=8, bottom=8),
             content=self._ledger_table(),
@@ -1844,7 +1886,7 @@ class TaskHubFlet:
             if self.lt_sort == key:
                 arrow = " ↑" if self.lt_asc else " ↓"
             t = ft.Text(tr("col_" + key) + arrow, size=12,
-                        weight=ft.FontWeight.W_700, color=T["sub"])
+                        weight=ft.FontWeight.W_600, color=T["sub"])
             cell = ft.Container(
                 padding=ft.Padding.symmetric(horizontal=12, vertical=8),
                 width=width, expand=(width is None),
@@ -1862,7 +1904,7 @@ class TaskHubFlet:
                 padding=40, alignment=ft.Alignment.CENTER,
                 content=ft.Column([
                     ft.Icon(icon("search_off"), size=20, color=T["faint"]),
-                    ft.Text(tr("ledger_empty1"), size=14, color=T["sub"]),
+                    ft.Text(tr("ledger_empty1"), size=13, color=T["sub"]),
                     ft.Text(tr("ledger_empty2"), size=12, color=T["faint"]),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                    spacing=4)))
@@ -1877,9 +1919,9 @@ class TaskHubFlet:
             cells = [
                 ft.Container(width=None, expand=True, padding=ft.Padding.symmetric(
                     horizontal=12, vertical=8),
-                    content=ft.Text(r["title"], size=14,
+                    content=ft.Text(r["title"], size=13,
                                     color=T["faint"] if done else T["text"],
-                                    weight=ft.FontWeight.W_500,
+                                    weight=ft.FontWeight.W_400,
                                     max_lines=1,
                                     overflow=ft.TextOverflow.ELLIPSIS)),
                 ft.Container(width=cw["project"], padding=ft.Padding.symmetric(
@@ -2013,7 +2055,7 @@ class TaskHubFlet:
             width=130, alignment=ft.Alignment.CENTER,
             content=ft.Text(tr("cal_title", y=self.cal_year,
                                m=month_name(self.cal_month)), size=16,
-                            weight=ft.FontWeight.W_700, color=T["text"]))
+                            weight=ft.FontWeight.W_600, color=T["text"]))
         legend = ft.Row(spacing=12)
         for kind_key, color in (("cal_legend_deadline", DANGER),
                                 ("cal_legend_start", C_BLUE),
@@ -2110,7 +2152,7 @@ class TaskHubFlet:
                     and date_obj.isoformat() == self.cal_sel)
         is_today = date_obj == today
         bg = T["tint"] if selected else T["surface"]
-        border_c = PRIMARY if selected else T["border"]
+        border_c = T["accent"] if selected else T["border"]
         cell_items: list[ft.Control] = []
         day_hits: list = []
         if date_obj is not None:
@@ -2136,14 +2178,14 @@ class TaskHubFlet:
         more_n = len(day_hits) - 2
         cell_items.append(ft.Container(
             height=10, padding=ft.Padding.only(left=4),
-            content=ft.Text(tr("cal_more", n=more_n), size=8, color=T["faint"])
+            content=ft.Text(tr("cal_more", n=more_n), size=10, color=T["faint"])
             if more_n > 0 else None))
         day_head = ft.Row(spacing=4)
         if is_today:
             day_head.controls.append(ft.Container(
-                width=18, height=18, border_radius=radius(8), bgcolor=PRIMARY_DK,
+                width=18, height=18, border_radius=radius(R["sm"]), bgcolor=self.T["accent"],
                 alignment=ft.Alignment.CENTER,
-                content=ft.Text(str(dnum), size=10, color="white",
+                content=ft.Text(str(dnum), size=11, color="white",
                                 weight=ft.FontWeight.W_600)))
         else:
             day_head.controls.append(ft.Container(
@@ -2155,8 +2197,8 @@ class TaskHubFlet:
             n = len(hits.get(date_obj.isoformat(), []))
             if n:
                 day_head.controls.append(ft.Container(expand=True))
-                day_head.controls.append(ft.Text(str(n), size=10, color=PRIMARY_DK,
-                                                 weight=ft.FontWeight.W_700))
+                day_head.controls.append(ft.Text(str(n), size=11, color=self.T["accent"],
+                                                 weight=ft.FontWeight.W_600))
         return ft.Container(
             expand=True, bgcolor=bg,
             border_radius=radius(8),
@@ -2232,15 +2274,15 @@ class TaskHubFlet:
                                 max_lines=1,
                                 overflow=ft.TextOverflow.ELLIPSIS),
                         ft.Text(f"{r['project']} · {dstatus(r['status'])}",
-                                size=10, color=T["sub"]),
+                                size=11, color=T["sub"]),
                     ])))
             body = ft.ListView(expand=True, spacing=4, controls=rows)
         return ft.Container(
-            height=164, bgcolor=T["surface"], border_radius=radius(16),
+            height=164, bgcolor=T["surface"], border_radius=radius(R["lg"]),
             border=ft.Border.all(1, T["border"]),
             padding=ft.Padding.only(left=16, right=16, top=12, bottom=12),
             content=ft.Column([
-                ft.Text(title, size=14, weight=ft.FontWeight.W_700,
+                ft.Text(title, size=13, weight=ft.FontWeight.W_600,
                         color=T["text"]),
                 body,
             ], spacing=8))
@@ -2313,7 +2355,7 @@ class TaskHubFlet:
         # IgnorePointer+ColoredBox 绘制、颜色完全由 barrier_color 控制，
         # 设为透明即无遮罩；alignment 定位到窗口底部居中，视觉等效 SnackBar。
         colors = {"ok": OK_GREEN, "warn": WARN, "err": DANGER,
-                  "info": PRIMARY_DK}
+                  "info": self.T["accent"]}
         # 连续 toast：先精确关掉上一个未消失的，避免同位置视觉重叠
         old = getattr(self, "_toast_dlg", None)
         if old is not None and getattr(old, "open", False):
@@ -2349,8 +2391,8 @@ class TaskHubFlet:
             content=ft.Container(
                 width=pill_w,
                 height=46 + 19 * (lines - 1),
-                bgcolor=colors.get(kind, PRIMARY_DK),
-                border_radius=radius(10),
+                bgcolor=colors.get(kind, self.T["accent"]),
+                border_radius=radius(R["md"]),
                 padding=ft.Padding.symmetric(horizontal=14, vertical=6),
                 alignment=ft.Alignment.CENTER,
                 content=ft.Row(
@@ -2427,8 +2469,8 @@ class TaskHubFlet:
             expand=True, bgcolor=T["surface2"], border_radius=radius(8),
             padding=ft.Padding.symmetric(horizontal=12, vertical=8),
             content=ft.Column([
-                ft.Text(label, size=10, color=T["faint"]),
-                ft.Text(value or tr("ph_empty"), size=14,
+                ft.Text(label, size=11, color=T["faint"]),
+                ft.Text(value or tr("ph_empty"), size=13,
                         weight=ft.FontWeight.W_600,
                         color=value_color or T["text"], max_lines=1,
                         overflow=ft.TextOverflow.ELLIPSIS),
@@ -2455,7 +2497,7 @@ class TaskHubFlet:
             tooltip=tr("tip_switch_status"),
             content=ft.Container(
                 bgcolor=ft.Colors.with_opacity(0.14, ST_FILL[st]),
-                border_radius=radius(20),
+                border_radius=radius(R["pill"]),
                 padding=ft.Padding.symmetric(horizontal=12, vertical=4),
                 content=ft.Row([ft.Container(width=8, height=8,
                                              border_radius=radius(4),
@@ -2465,7 +2507,7 @@ class TaskHubFlet:
                                         color=T["st_text"].get(st, T["text"]),
                                         weight=ft.FontWeight.W_600)], tight=True)),
             items=[ft.PopupMenuItem(
-                       content=ft.Text(tr("status_to", st=dstatus(s)), size=14),
+                       content=ft.Text(tr("status_to", st=dstatus(s)), size=12),
                        on_click=lambda e, s=s: self._do_status(rid, s))
                    for s in taskhub.VALID_STATUSES if s != st])
 
@@ -2488,7 +2530,7 @@ class TaskHubFlet:
                                   icon_color=T["faint"],
                                   tooltip=tr("dlg_close_tooltip"),
                                   on_click=lambda e: self._pop_dlg())]),
-            ft.Text(row["title"], size=18, weight=ft.FontWeight.W_700,
+            ft.Text(row["title"], size=20, weight=ft.FontWeight.W_600,
                     color=T["text"]),
             meta, meta2,
         ]
@@ -2500,17 +2542,17 @@ class TaskHubFlet:
                 bgcolor=ft.Colors.with_opacity(0.10, OK_GREEN),
                 border_radius=radius(8), padding=12,
                 content=ft.Column([
-                    ft.Text(tr("fld_result"), size=10, color=OK_GREEN,
+                    ft.Text(tr("fld_result"), size=11, color=OK_GREEN,
                             weight=ft.FontWeight.W_600),
-                    ft.Text(row["result"], size=14, color=T["text"]),
+                    ft.Text(row["result"], size=13, color=T["text"]),
                 ], spacing=4)))
         body_controls.append(ft.Container(
             bgcolor=T["surface2"], border_radius=radius(8), padding=12,
             content=ft.Column([
-                ft.Text(tr("fld_detail"), size=10, color=T["sub"],
+                ft.Text(tr("fld_detail"), size=11, color=T["sub"],
                         weight=ft.FontWeight.W_600),
                 ft.Container(height=2),
-                ft.Text(row["detail"] or tr("fld_no_detail"), size=14,
+                ft.Text(row["detail"] or tr("fld_no_detail"), size=13,
                         color=T["text"], selectable=True),
             ], spacing=2)))
 
@@ -2542,7 +2584,7 @@ class TaskHubFlet:
                                 bgcolor={ft.ControlState.DEFAULT: OK_GREEN},
                                 color={ft.ControlState.DEFAULT: "white"},
                                 text_style=ft.TextStyle(
-                                    size=14, weight=ft.FontWeight.W_600)),
+                                    size=13, weight=ft.FontWeight.W_600)),
                             on_click=lambda e: self._dlg_close_task(rid)),
             ft.OutlinedButton(tr("btn_delete"), style=ft.ButtonStyle(
                 shape=ft.StadiumBorder(),
@@ -2550,11 +2592,11 @@ class TaskHubFlet:
                 bgcolor={ft.ControlState.DEFAULT:
                          ft.Colors.with_opacity(0.10, DANGER)},
                 color={ft.ControlState.DEFAULT: DANGER},
-                text_style=ft.TextStyle(size=14, weight=ft.FontWeight.W_600)),
+                text_style=ft.TextStyle(size=13, weight=ft.FontWeight.W_600)),
                 on_click=lambda e: self._dlg_delete(rid)),
         ], spacing=8))
         body_controls.append(ft.Text(tr("rec_id", rid=row["record_id"]),
-                                     size=10, color=T["faint"]))
+                                     size=11, color=T["faint"]))
 
         # 高度按内容自适应：详情/元数据/结论/备注 + 长度因子，上限 760
         detail_lines = max(1, len((row["detail"] or "").splitlines()))
@@ -2605,7 +2647,7 @@ class TaskHubFlet:
         if left == 0:
             return (tr("hint_due_today", date=dl), WARN)
         if left <= 7:
-            return (tr("hint_left", n=left, date=dl), PRIMARY_DK)
+            return (tr("hint_left", n=left, date=dl), self.T["accent"])
         return (tr("hint_left", n=left, date=dl), T["sub"])
 
     def _form_field(self, label, control):
@@ -2640,7 +2682,7 @@ class TaskHubFlet:
         kw = dict(value=value, hint_text=hint, text_size=13, dense=True,
                   border_radius=radius(8), border_color=T["border"],
                   filled=True, fill_color=T["surface2"], expand=expand,
-                  read_only=readonly, cursor_color=PRIMARY)
+                  read_only=readonly, cursor_color=self.T["accent"])
         if width:
             kw["width"] = width
         if multiline:
@@ -2713,7 +2755,7 @@ class TaskHubFlet:
             modal=False, bgcolor=T["surface"],
             shape=ft.RoundedRectangleBorder(radius=20),
             title=ft.Text(tr("dlg_new_task"), size=16,
-                          weight=ft.FontWeight.W_700, color=T["text"]),
+                          weight=ft.FontWeight.W_600, color=T["text"]),
             content=ft.Container(
                 width=600,
                 content=ft.Column([
@@ -2792,7 +2834,7 @@ class TaskHubFlet:
             modal=True, bgcolor=T["surface"],
             shape=ft.RoundedRectangleBorder(radius=20),
             title=ft.Text(tr("dlg_edit_task"), size=16,
-                          weight=ft.FontWeight.W_700, color=T["text"]),
+                          weight=ft.FontWeight.W_600, color=T["text"]),
             content=ft.Container(
                 width=600,
                 content=ft.Column([
@@ -2852,9 +2894,9 @@ class TaskHubFlet:
             modal=True, bgcolor=T["surface"],
             shape=ft.RoundedRectangleBorder(radius=20),
             title=ft.Text(tr("dlg_finish_task"), size=16,
-                          weight=ft.FontWeight.W_700, color=T["text"]),
+                          weight=ft.FontWeight.W_600, color=T["text"]),
             content=ft.Container(width=560, content=ft.Column([
-                ft.Text(row["title"], size=14, color=T["text"], max_lines=2),
+                ft.Text(row["title"], size=13, color=T["text"], max_lines=2),
                 ft.Container(height=6),
                 self._form_field(tr("fld_result_req"), f_result),
                 self._form_field(tr("fld_finish_default"), f_date),
@@ -2870,7 +2912,7 @@ class TaskHubFlet:
                                     bgcolor={ft.ControlState.DEFAULT: OK_GREEN},
                                     color={ft.ControlState.DEFAULT: "white"},
                                     text_style=ft.TextStyle(
-                                        size=14, weight=ft.FontWeight.W_600)),
+                                        size=13, weight=ft.FontWeight.W_600)),
                                 on_click=save),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
@@ -2901,9 +2943,9 @@ class TaskHubFlet:
             modal=True, bgcolor=T["surface"],
             shape=ft.RoundedRectangleBorder(radius=20),
             title=ft.Text(tr("dlg_delete_task"), size=16,
-                          weight=ft.FontWeight.W_700, color=DANGER),
+                          weight=ft.FontWeight.W_600, color=DANGER),
             content=ft.Container(width=480, content=ft.Column([
-                ft.Text(tr("delete_confirm", title=row["title"]), size=14,
+                ft.Text(tr("delete_confirm", title=row["title"]), size=13,
                         color=T["text"]),
                 ft.Text(tr("delete_warning"), size=12, color=T["sub"]),
             ], tight=True)),
@@ -2919,7 +2961,7 @@ class TaskHubFlet:
                                     bgcolor={ft.ControlState.DEFAULT: DANGER},
                                     color={ft.ControlState.DEFAULT: "white"},
                                     text_style=ft.TextStyle(
-                                        size=14, weight=ft.FontWeight.W_600)),
+                                        size=13, weight=ft.FontWeight.W_600)),
                                 on_click=do_delete),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
