@@ -855,26 +855,41 @@ class TaskHubFlet:
         )
         self._show_dlg(dlg)
 
+    def _ensure_pickers(self):
+        """懒创建并缓存 FilePicker（0.86: Service 控件严禁挂 page.overlay——
+        会被客户端当可视控件渲染，报 Unknown control）。
+        构造时若 context 已绑定页面会自动注册；未绑定时显式补注册。"""
+        pickers = getattr(self, "_cached_pickers", None)
+        if pickers is None:
+            pickers = []
+            for _ in range(2):
+                p = ft.FilePicker()
+                try:
+                    reg = self.page._services._services
+                    if not any(p is x for x in reg):
+                        self.page._services.register_service(p)
+                except Exception:
+                    pass
+                pickers.append(p)
+            self._cached_pickers = tuple(pickers)
+        return self._cached_pickers
+
     def _dlg_app_edit(self, app: dict | None = None):
         is_edit = bool(app)
         app = app or {}
-        file_picker = ft.FilePicker()
-        icon_picker = ft.FilePicker()
-        self.page.overlay.extend([file_picker, icon_picker])
-        self.page.update()
+        file_picker, icon_picker = self._ensure_pickers()
         path_field = ft.TextField(
             label=tr("app_field_path"), value=app.get("path", ""),
             width=420, border_color=self.T["border"], filled=True,
             fill_color=self.T["surface2"],
         )
-        def pick_file(_):
-            file_picker.pick_files(allow_multiple=False,
-                                    dialog_title=tr("app_btn_pick_file"))
-        def on_pick_file(e: ft.FilePickerResultEvent):
-            if e.files:
-                path_field.value = e.files[0].path or ""
+        async def pick_file(_):
+            files = await file_picker.pick_files(
+                allow_multiple=False,
+                dialog_title=tr("app_btn_pick_file"))
+            if files:
+                path_field.value = files[0].path or ""
                 self.page.update()
-        file_picker.on_result = on_pick_file
         name_field = ft.TextField(
             label=tr("app_field_name"), value=app.get("name", ""),
             width=420, border_color=self.T["border"], filled=True,
@@ -890,15 +905,14 @@ class TaskHubFlet:
             width=300, border_color=self.T["border"], filled=True,
             fill_color=self.T["surface2"],
         )
-        def pick_icon(_):
-            icon_picker.pick_files(allow_multiple=False,
-                                    file_type=ft.FilePickerFileType.IMAGE,
-                                    dialog_title=tr("app_btn_pick_icon"))
-        def on_pick_icon(e: ft.FilePickerResultEvent):
-            if e.files:
-                icon_field.value = e.files[0].path or ""
+        async def pick_icon(_):
+            files = await icon_picker.pick_files(
+                allow_multiple=False,
+                file_type=ft.FilePickerFileType.IMAGE,
+                dialog_title=tr("app_btn_pick_icon"))
+            if files:
+                icon_field.value = files[0].path or ""
                 self.page.update()
-        icon_picker.on_result = on_pick_icon
         def do_save(_):
             n = (name_field.value or "").strip()
             p = (path_field.value or "").strip()
