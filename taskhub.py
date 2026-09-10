@@ -384,6 +384,165 @@ def delete_project(conn: sqlite3.Connection, name: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+def icons_dir() -> str:
+    """快捷应用提取图标存放目录：<应用基准目录>/data/icons。"""
+    d = os.path.join(_app_base_dir(), "data", "icons")
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def extract_app_info(file_path: str, target_dir: str | None = None) -> tuple[str, str]:
+    """从文件路径提取软件的友好名称，并尝试提取高清 PNG 图标。
+
+    支持 .exe, .lnk, 各种文档及图片文件。
+    在 Windows 下基于系统原生 Shell32 / User32 / Version / GDI+ 实现，零第三方依赖。
+    返回 (app_name, icon_path)。提取失败或非 Windows 下安全回退。
+    """
+    file_path = (file_path or "").strip()
+    if not file_path:
+        return "", ""
+
+    if (file_path.startswith('"') and file_path.endswith('"')) or \
+       (file_path.startswith("'") and file_path.endswith("'")):
+        file_path = file_path[1:-1].strip()
+
+    file_path = os.path.abspath(os.path.expanduser(file_path))
+    base_name = os.path.splitext(os.path.basename(file_path))[0]
+    if not os.path.exists(file_path) or sys.platform != "win32":
+        return base_name, ""
+
+    target_dir = target_dir or icons_dir()
+    name = ""
+    icon_path = ""
+
+    try:
+        import ctypes
+        from ctypes import wintypes
+        import hashlib
+
+        shell32 = ctypes.windll.shell32
+        user32 = ctypes.windll.user32
+        version_dll = ctypes.windll.version
+
+        class SHFILEINFOW(ctypes.Structure):
+            _fields_ = [
+                ("hIcon", wintypes.HICON),
+                ("iIcon", ctypes.c_int),
+                ("dwAttributes", wintypes.DWORD),
+                ("szDisplayName", ctypes.c_wchar * 260),
+                ("szTypeName", ctypes.c_wchar * 80),
+            ]
+
+        SHGFI_ICON = 0x000000100
+        SHGFI_LARGEICON = 0x000000000
+        SHGFI_DISPLAYNAME = 0x000000200
+
+        sfi = SHFILEINFOW()
+        shell32.SHGetFileInfoW(
+            file_path, 0, ctypes.byref(sfi), ctypes.sizeof(sfi),
+            SHGFI_ICON | SHGFI_LARGEICON | SHGFI_DISPLAYNAME
+        )
+        sh_name = sfi.szDisplayName.strip()
+        sh_icon = sfi.hIcon
+
+        # 1. 尝试从 PE 版本资源获取本地化友好名称（如 "微信" 代替 "WeChat"）
+        if file_path.lower().endswith(".exe"):
+            try:
+                size = version_dll.GetFileVersionInfoSizeW(file_path, None)
+                if size > 0:
+                    res_buf = ctypes.create_string_buffer(size)
+                    if version_dll.GetFileVersionInfoW(file_path, 0, size, res_buf):
+                        codepages = ["080404b0", "040904b0", "080404e4", "040904e4", "000004b0"]
+                        trans_ptr = ctypes.c_void_p()
+                        trans_len = wintypes.UINT()
+                        if version_dll.VerQueryValueW(
+                            res_buf, r"\VarFileInfo\Translation",
+                            ctypes.byref(trans_ptr), ctypes.byref(trans_len)
+                        ) and trans_len.value >= 4:
+                            raw = ctypes.cast(trans_ptr, ctypes.POINTER(wintypes.WORD))
+                            lang = f"{raw[0]:04x}{raw[1]:04x}"
+                            if lang not in codepages:
+                                codepages.insert(0, lang)
+                        for cp in codepages:
+                            desc_ptr = ctypes.c_void_p()
+                            desc_len = wintypes.UINT()
+                            sub_block = f"\\StringFileInfo\\{cp}\\FileDescription"
+                            if version_dll.VerQueryValueW(
+                                res_buf, sub_block, ctypes.byref(desc_ptr), ctypes.byref(desc_len)
+                            ) and desc_len.value > 0 and desc_ptr.value:
+                                val = ctypes.wstring_at(desc_ptr.value).strip()
+                                if val:
+                                    name = val
+                                    break
+            except Exception:
+                pass
+
+        if not name:
+            name = sh_name or base_name
+
+        # 2. 如果所选文件本身就是常规图片格式，直接复用
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext in (".png", ".jpg", ".jpeg", ".ico", ".webp"):
+            if sh_icon:
+                user32.DestroyIcon(sh_icon)
+            return name, file_path
+
+        # 3. 提取高清图标：.exe/.dll/.ico 优先提取 48x48
+        hicon = wintypes.HICON()
+        icon_id = wintypes.UINT()
+        cnt = 0
+        if file_path.lower().endswith((".exe", ".dll", ".ico")):
+            cnt = user32.PrivateExtractIconsW(file_path, 0, 48, 48, ctypes.byref(hicon), ctypes.byref(icon_id), 1, 0)
+        target_hicon = hicon if (cnt > 0 and hicon.value) else sh_icon
+
+        if target_hicon:
+            gdiplus = ctypes.windll.gdiplus
+
+            class GdiplusStartupInput(ctypes.Structure):
+                _fields_ = [
+                    ("GdiplusVersion", wintypes.UINT),
+                    ("DebugEventCallback", ctypes.c_void_p),
+                    ("SuppressBackgroundThread", wintypes.BOOL),
+                    ("SuppressExternalCodecs", wintypes.BOOL),
+                ]
+
+            token = ctypes.c_void_p()
+            startup_in = GdiplusStartupInput(1, None, False, False)
+            if gdiplus.GdiplusStartup(ctypes.byref(token), ctypes.byref(startup_in), None) == 0:
+                bitmap = ctypes.c_void_p()
+                if gdiplus.GdipCreateBitmapFromHICON(target_hicon, ctypes.byref(bitmap)) == 0:
+                    class GUID(ctypes.Structure):
+                        _fields_ = [
+                            ("Data1", wintypes.DWORD),
+                            ("Data2", wintypes.WORD),
+                            ("Data3", wintypes.WORD),
+                            ("Data4", ctypes.c_byte * 8),
+                        ]
+                    png_clsid = GUID(
+                        0x557cf406, 0x1a04, 0x11d3,
+                        (ctypes.c_byte * 8)(0x9a, 0x73, 0x00, 0x00, 0xf8, 0x1e, 0xf3, 0x2e)
+                    )
+                    os.makedirs(target_dir, exist_ok=True)
+                    p_hash = hashlib.md5(file_path.encode("utf-8", "ignore")).hexdigest()[:8]
+                    clean_name = "".join(c for c in name if c.isalnum() or c in ("_", "-"))[:20] or "app"
+                    out_png = os.path.join(target_dir, f"{clean_name}_{p_hash}.png")
+                    if gdiplus.GdipSaveImageToFile(bitmap, out_png, ctypes.byref(png_clsid), None) == 0:
+                        icon_path = out_png
+                    gdiplus.GdipDisposeImage(bitmap)
+                gdiplus.GdiplusShutdown(token)
+
+        if hicon and hicon.value:
+            user32.DestroyIcon(hicon)
+        if sh_icon:
+            user32.DestroyIcon(sh_icon)
+
+    except Exception:
+        if not name:
+            name = base_name
+
+    return name, icon_path
+
+
 def list_apps(conn: sqlite3.Connection) -> list[dict]:
     rows = conn.execute(
         "SELECT id, name, path, args, icon_path, sort_order, created_at, updated_at "
@@ -398,14 +557,20 @@ def get_app(conn: sqlite3.Connection, app_id: int) -> dict | None:
 
 def add_app(conn: sqlite3.Connection, name: str, path: str,
             args: str = "", icon_path: str = "") -> dict:
-    name = (name or "").strip()
     path = (path or "").strip()
-    args = (args or "").strip()
-    icon_path = (icon_path or "").strip()
-    if not name:
-        raise UsageError("名称必填")
     if not path:
         raise UsageError("可执行路径必填")
+    name = (name or "").strip()
+    icon_path = (icon_path or "").strip()
+    if not name or not icon_path:
+        ext_name, ext_icon = extract_app_info(path)
+        if not name:
+            name = ext_name
+        if not icon_path and ext_icon:
+            icon_path = ext_icon
+    if not name:
+        name = os.path.splitext(os.path.basename(path))[0] or "未命名应用"
+    args = (args or "").strip()
     ts = now_str()
     cur = conn.execute(
         "INSERT INTO app_launchers (name, path, args, icon_path, sort_order, created_at, updated_at) "
@@ -1135,8 +1300,8 @@ def _run_apps_command(args: argparse.Namespace) -> int:
     conn = open_db(create=True)
     try:
         if args.add:
-            if not args.name or not args.path:
-                raise UsageError("--add 需配合 --name 与 --path")
+            if not args.path:
+                raise UsageError("--add 需配合 --path（--name 可选，不提供则自动提取）")
             app = add_app(conn, args.name, args.path, args.args, args.icon_path)
             if as_json:
                 out_json({"ok": True, "mode": "apps", "action": "added", "app": app})

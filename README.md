@@ -17,7 +17,7 @@ TaskHub is a local-first task tracking tool: **single-file SQLite database + Fle
 - **Task detail dialog**: status transitions / progress notes / field editing / close / delete, auto-scroll for long content
 - **User-managed task types & projects**: add/manage directly in the UI; stored in the database and migrated with it; in-use delete protection
 - **One-click UI language switch (Chinese/English)** (translates UI text only, data values unchanged); light/dark themes; shortcuts `F5` refresh, `Esc` close dialog
-- **Desktop app launcher sidebar** (left rail): pin frequently used apps, right-click to add/edit/reorder/launch — shared between the GUI sidebar and the CLI `apps` command
+- **Desktop app launcher sidebar** (left rail): pin frequently used apps, right-click to add/edit/reorder/launch, automatically detects app name and extracts high-res icons on file selection (Windows) — shared between the GUI sidebar and the CLI `apps` command
 
 ### CLI (shares the same database with the GUI)
 
@@ -175,7 +175,7 @@ python taskhub.py types [--json]
 
 ```
 python taskhub.py apps                                              # list all apps
-python taskhub.py apps --add --name X --path "C:/path/app.exe"      # add (--path required)
+python taskhub.py apps --add --path "C:/path/app.exe"                # add (--path required, --name/--icon auto-extracted if omitted)
 python taskhub.py apps --add --name X --path "..." --args "..." --icon image_path
 python taskhub.py apps --update <id> --name X --path X [--args X] [--icon X]
 python taskhub.py apps --update <id> --move up|down                 # reorder

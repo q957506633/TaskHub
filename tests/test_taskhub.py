@@ -735,6 +735,52 @@ class TestPureHelpers(unittest.TestCase):
             self.assertRegex(rid, r"^[0-9A-Za-z]{22}$")
 
 
+class TestAppLaunchers(unittest.TestCase):
+    """测试快捷应用管理及图标/名称自动提取。"""
+
+    def setUp(self) -> None:
+        import taskhub
+        self.taskhub = taskhub
+        fd, self.db_path = tempfile.mkstemp(suffix=".db", prefix="taskhub_test_apps_")
+        os.close(fd)
+        os.remove(self.db_path)
+        os.environ["TASKHUB_DB"] = self.db_path
+        self.conn = taskhub.open_db(create=True)
+        taskhub.ensure_schema(self.conn)
+
+    def tearDown(self) -> None:
+        self.conn.close()
+        os.environ.pop("TASKHUB_DB", None)
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+
+    def test_extract_app_info_notepad(self) -> None:
+        t = self.taskhub
+        np = r"C:\Windows\notepad.exe"
+        if os.path.exists(np):
+            name, icon = t.extract_app_info(np)
+            self.assertTrue(bool(name))
+            if sys.platform == "win32":
+                self.assertTrue(bool(icon))
+                self.assertTrue(os.path.exists(icon))
+
+    def test_extract_app_info_fallback(self) -> None:
+        t = self.taskhub
+        name, icon = t.extract_app_info("non_existent_app.exe")
+        self.assertEqual(name, "non_existent_app")
+        self.assertEqual(icon, "")
+
+    def test_add_app_auto_info(self) -> None:
+        t = self.taskhub
+        np = r"C:\Windows\notepad.exe"
+        if os.path.exists(np):
+            app = t.add_app(self.conn, "", np)
+            self.assertTrue(bool(app["name"]))
+            self.assertEqual(app["path"], np)
+            if sys.platform == "win32":
+                self.assertTrue(bool(app["icon_path"]))
+
+
 def datetime_date_today() -> str:
     """测试辅助：今天的 ISO 日期（与 CLI 同源逻辑）。"""
     import datetime

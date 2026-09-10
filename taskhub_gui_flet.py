@@ -727,21 +727,29 @@ class TaskHubFlet:
 
     def _app_avatar(self, app: dict, size: int = 44):
         icon = (app.get("icon_path") or "").strip()
-        if icon and os.path.isfile(icon):
-            return ft.Container(
-                width=size, height=size, border_radius=radius(R["md"]),
-                clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
-                content=ft.Image(src=icon, width=size, height=size,
-                                  fit=ft.ImageFit.CONTAIN),
-            )
         letter = (app.get("name") or "?").strip()[:2] or "?"
-        return ft.Container(
+        fallback = ft.Container(
             width=size, height=size, border_radius=radius(R["md"]),
             bgcolor=self._app_avatar_color(app.get("name", "")),
             alignment=ft.Alignment.CENTER,
             content=ft.Text(letter, color="white", size=16,
-                                weight=ft.FontWeight.W_600),
+                            weight=ft.FontWeight.W_600),
         )
+        if icon and os.path.isfile(icon):
+            try:
+                fit_val = getattr(ft, "BoxFit", None) and getattr(ft.BoxFit, "CONTAIN", "contain") or "contain"
+                return ft.Container(
+                    width=size, height=size, border_radius=radius(R["md"]),
+                    clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+                    content=ft.Image(
+                        src=icon, width=size, height=size,
+                        fit=fit_val,
+                        error_content=fallback,
+                    ),
+                )
+            except Exception:
+                return fallback
+        return fallback
 
     def _build_app_rail(self):
         T = self.T
@@ -761,12 +769,15 @@ class TaskHubFlet:
             ))
         for a in self._apps:
             app_id = a["id"]
-            cell = ft.Container(
-                width=56, padding=ft.Padding.symmetric(vertical=2),
-                alignment=ft.Alignment.CENTER,
-                content=self._app_avatar(a),
-                on_click=lambda e, aid=app_id: self._on_app_launch(aid),
+            cell = ft.GestureDetector(
+                content=ft.Container(
+                    width=56, padding=ft.Padding.symmetric(vertical=2),
+                    alignment=ft.Alignment.CENTER,
+                    content=self._app_avatar(a),
+                ),
+                on_tap=lambda e, aid=app_id: self._on_app_launch(aid),
                 on_secondary_tap=lambda e, app=a: self._open_app_ctx_menu(e, app),
+                mouse_cursor=ft.MouseCursor.CLICK,
                 tooltip=a.get("name", ""),
             )
             items.append(cell)
@@ -878,20 +889,19 @@ class TaskHubFlet:
         is_edit = bool(app)
         app = app or {}
         file_picker, icon_picker = self._ensure_pickers()
-        path_field = ft.TextField(
-            label=tr("app_field_path"), value=app.get("path", ""),
+
+        avatar_preview = ft.Container(
+            content=self._app_avatar({"name": app.get("name", ""), "icon_path": app.get("icon_path", "")}, size=48),
+            alignment=ft.Alignment.CENTER,
+        )
+
+        name_field = ft.TextField(
+            label=tr("app_field_name"), value=app.get("name", ""),
             width=420, border_color=self.T["border"], filled=True,
             fill_color=self.T["surface2"],
         )
-        async def pick_file(_):
-            files = await file_picker.pick_files(
-                allow_multiple=False,
-                dialog_title=tr("app_btn_pick_file"))
-            if files:
-                path_field.value = files[0].path or ""
-                self.page.update()
-        name_field = ft.TextField(
-            label=tr("app_field_name"), value=app.get("name", ""),
+        path_field = ft.TextField(
+            label=tr("app_field_path"), value=app.get("path", ""),
             width=420, border_color=self.T["border"], filled=True,
             fill_color=self.T["surface2"],
         )
@@ -902,9 +912,35 @@ class TaskHubFlet:
         )
         icon_field = ft.TextField(
             label=tr("app_field_icon"), value=app.get("icon_path", ""),
-            width=300, border_color=self.T["border"], filled=True,
+            width=360, border_color=self.T["border"], filled=True,
             fill_color=self.T["surface2"],
         )
+
+        def refresh_preview():
+            avatar_preview.content = self._app_avatar(
+                {"name": name_field.value or "", "icon_path": icon_field.value or ""},
+                size=48,
+            )
+
+        name_field.on_change = lambda e: (refresh_preview(), self.page.update())
+        icon_field.on_change = lambda e: (refresh_preview(), self.page.update())
+
+        async def pick_file(_):
+            files = await file_picker.pick_files(
+                allow_multiple=False,
+                dialog_title=tr("app_btn_pick_file"))
+            if files:
+                p = files[0].path or ""
+                path_field.value = p
+                # 自动提取软件名称与图标
+                auto_name, auto_icon = th.extract_app_info(p)
+                if auto_name and (not is_edit or not (name_field.value or "").strip()):
+                    name_field.value = auto_name
+                if auto_icon and (not is_edit or not (icon_field.value or "").strip()):
+                    icon_field.value = auto_icon
+                refresh_preview()
+                self.page.update()
+
         async def pick_icon(_):
             files = await icon_picker.pick_files(
                 allow_multiple=False,
@@ -912,7 +948,9 @@ class TaskHubFlet:
                 dialog_title=tr("app_btn_pick_icon"))
             if files:
                 icon_field.value = files[0].path or ""
+                refresh_preview()
                 self.page.update()
+
         def do_save(_):
             n = (name_field.value or "").strip()
             p = (path_field.value or "").strip()
@@ -941,16 +979,31 @@ class TaskHubFlet:
             self._toast(msg, "ok")
             self._pop_dlg()
             self._rebuild_shell()
+
+        header_preview = ft.Container(
+            padding=ft.Padding.only(bottom=12),
+            content=ft.Row([
+                avatar_preview,
+                ft.Container(width=8),
+                ft.Column([
+                    ft.Text(tr("app_title_edit" if is_edit else "app_title_add"),
+                            size=14, weight=ft.FontWeight.W_600, color=self.T["text"]),
+                    ft.Text(tr("app_auto_detect_hint"), size=11, color=self.T["faint"]),
+                ], spacing=2, expand=True),
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        )
+
         dlg = ft.AlertDialog(
             modal=False,
             title=ft.Text(tr("app_title_edit" if is_edit else "app_title_add")),
             content=ft.Container(
                 width=480,
                 content=ft.Column([
-                    name_field,
-                    ft.Container(height=8),
+                    header_preview,
                     ft.Row([path_field], wrap=True),
-                    ft.TextButton(tr("app_btn_pick_file"), on_click=pick_file),
+                    ft.TextButton(tr("app_btn_pick_file"), icon=icon("folder_open"), on_click=pick_file),
+                    ft.Container(height=6),
+                    name_field,
                     ft.Container(height=8),
                     args_field,
                     ft.Container(height=8),

@@ -17,7 +17,7 @@ TaskHub 是一个本地优先的任务跟踪工具：**SQLite 单文件数据库
 - **任务详情弹窗**：状态流转 / 进度备注追加 / 字段编辑 / 完成关闭 / 删除，内容超长自动滚动
 - **任务类型与所属项目可自定义**：界面上直接新增/管理，存数据库、随库迁移；删除有在用保护
 - **界面中英文一键切换**（仅翻译界面文字，数据值保持原样）；亮色/暗色双主题；快捷键 `F5` 刷新、`Esc` 关闭弹窗
-- **桌面应用启动器侧栏**（左侧竖栏）：把常用软件钉到侧栏，右键增/改/排序/启动；GUI 侧栏与 CLI `apps` 命令共用同一张数据表
+- **桌面应用启动器侧栏**（左侧竖栏）：把常用软件钉到侧栏，右键增/改/排序/启动，选择程序文件时自动识别软件名并提取高清图标；GUI 侧栏与 CLI `apps` 命令共用同一张数据表
 
 ### CLI（与 GUI 共用同一数据库）
 
@@ -175,7 +175,7 @@ python taskhub.py types [--json]
 
 ```
 python taskhub.py apps                                              # 列出全部启动项
-python taskhub.py apps --add --name X --path "C:/path/app.exe"      # 新增（--path 必填）
+python taskhub.py apps --add --path "C:/path/app.exe"                # 新增（--path 必填，--name/--icon 省略时自动提取）
 python taskhub.py apps --add --name X --path "..." --args "..." --icon image_path
 python taskhub.py apps --update <id> --name X --path X [--args X] [--icon X]
 python taskhub.py apps --update <id> --move up|down                 # 上下移动排序
